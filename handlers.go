@@ -5,6 +5,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"math/rand"
 	"time"
 
 	"github.com/libp2p/go-libp2p/core/peer"
@@ -27,6 +28,8 @@ func (dht *IpfsDHT) handlerForMsgType(t pb.Message_MessageType) dhtHandler {
 		return dht.handleFindPeer
 	case pb.Message_PING:
 		return dht.handlePing
+	case pb.Message_WANT:
+		return dht.handleWant
 	}
 
 	if dht.enableValues {
@@ -50,11 +53,91 @@ func (dht *IpfsDHT) handlerForMsgType(t pb.Message_MessageType) dhtHandler {
 	return nil
 }
 
+func (dht *IpfsDHT) handleWant(ctx context.Context, p peer.ID, pmes *pb.Message) (_ *pb.Message, err error) {
+	// first, is there even a key?
+	k := pmes.GetKey()
+	if len(k) == 0 {
+		return nil, errors.New("handleWant but no key was provided")
+	}
+
+	key := string(k)
+
+	// create random number
+	if weightedCoinFlip(0.5) {
+		// forward message
+		peers := dht.routingTable.ListPeers()
+		if len(peers) == 0 {
+			return nil, fmt.Errorf("no peers in routing table")
+		}
+
+		randIndex := rand.Int() % len(peers)
+
+		nextPeer := peers[randIndex]
+		dht.saveForwardingState(nextPeer, p, key)
+
+		// Forward WANT Message to nextPeer
+		err = dht.msgSender.SendMessage(ctx, nextPeer, pmes)
+        if err != nil {
+            logger.Debugw("failed to forward WANT message", "error", err, "to", nextPeer)
+            return nil, err
+        }
+	} else {
+		// initiate get
+		val, err := dht.GetValue(ctx, key)
+		if err != nil {
+			logger.Debugw("failed to get value", "error", err, "key", key)
+			return nil, err
+		}
+		
+		// If we found the value, send it back to the requester
+		if val != nil {
+			resp := pb.NewMessage(pb.Message_GET_VALUE, k, pmes.GetClusterLevel())
+			
+			rec := &recpb.Record{
+				Key:   k,
+				Value: val,
+			}
+			resp.Record = rec
+			
+			err = dht.msgSender.SendMessage(ctx, p, resp)
+			if err != nil {
+				logger.Debugw("failed to send value to requester", "error", err, "to", p)
+				return nil, err
+			}
+			
+			logger.Debugw("found and sent value to requester", "key", key, "to", p)
+		} else {
+			logger.Debugw("no value found for key", "key", key)
+		}
+	}
+
+	return nil, nil
+}
+
+func weightedCoinFlip(probHead float64) bool {
+	r := rand.Float64()
+
+	return r < probHead
+}
+
 func (dht *IpfsDHT) handleGetValue(ctx context.Context, p peer.ID, pmes *pb.Message) (_ *pb.Message, err error) {
 	// first, is there even a key?
 	k := pmes.GetKey()
 	if len(k) == 0 {
 		return nil, errors.New("handleGetValue but no key was provided")
+	}
+
+	key := string(k)
+	// Check if this response needs to be forwarded to another peer
+	if destination, exists := dht.getForwardingDestination(p, key); exists {
+		logger.Debugw("forwarding GET_VALUE response", "from", p, "to", destination, "key", key)
+		err := dht.msgSender.SendMessage(ctx, destination, pmes)
+		if err != nil {
+			logger.Debugw("failed to forward GET_VALUE response", "error", err, "to", destination)
+			return nil, err
+		}
+		// We've forwarded the response, no need to process it further
+		return nil, nil
 	}
 
 	// setup response
