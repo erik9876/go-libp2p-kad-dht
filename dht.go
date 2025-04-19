@@ -75,6 +75,12 @@ const (
 	protectedBuckets = 2
 )
 
+type forwardingState struct {
+    destination peer.ID    // where to forward the response
+    key         string     // the key being looked up
+    timestamp   time.Time  // when this forwarding was created (for cleanup)
+}
+
 // IpfsDHT is an implementation of Kademlia with S/Kademlia modifications.
 // It is used to implement the base Routing module.
 type IpfsDHT struct {
@@ -167,6 +173,59 @@ type IpfsDHT struct {
 	addrFilter func([]ma.Multiaddr) []ma.Multiaddr
 
 	onRequestHook func(ctx context.Context, s network.Stream, req *pb.Message)
+
+	// Map from the peer we forwarded to -> key -> forwarding state
+    forwardingTable     map[peer.ID]map[string]*forwardingState
+    forwardingTableLock sync.RWMutex  // protect concurrent access
+}
+
+// saveForwardingState saves the information about where to forward responses
+func (dht *IpfsDHT) saveForwardingState(from peer.ID, to peer.ID, key string) {
+    dht.forwardingTableLock.Lock()
+    defer dht.forwardingTableLock.Unlock()
+    
+    // Initialize the nested map if it doesn't exist
+    if dht.forwardingTable[from] == nil {
+        dht.forwardingTable[from] = make(map[string]*forwardingState)
+    }
+    
+    // Save the forwarding state
+    dht.forwardingTable[from][key] = &forwardingState{
+        destination: to,
+        key:        key,
+        timestamp:  time.Now(),
+    }
+}
+
+// getForwardingDestination gets the peer to forward a response to
+func (dht *IpfsDHT) getForwardingDestination(from peer.ID, key string) (peer.ID, bool) {
+    dht.forwardingTableLock.RLock()
+    defer dht.forwardingTableLock.RUnlock()
+    
+    if states, exists := dht.forwardingTable[from]; exists {
+        if state, exists := states[key]; exists {
+            return state.destination, true
+        }
+    }
+    return "", false
+}
+
+// cleanupForwardingState removes old forwarding entries
+func (dht *IpfsDHT) cleanupForwardingState(maxAge time.Duration) {
+    dht.forwardingTableLock.Lock()
+    defer dht.forwardingTableLock.Unlock()
+    
+    now := time.Now()
+    for from, states := range dht.forwardingTable {
+        for key, state := range states {
+            if now.Sub(state.timestamp) > maxAge {
+                delete(states, key)
+            }
+        }
+        if len(states) == 0 {
+            delete(dht.forwardingTable, from)
+        }
+    }
 }
 
 // Assert that IPFS assumptions about interfaces aren't broken. These aren't a
@@ -311,6 +370,7 @@ func makeDHT(h host.Host, cfg dhtcfg.Config) (*IpfsDHT, error) {
 		rtPeerDiversityFilter:  cfg.RoutingTable.DiversityFilter,
 		addrFilter:             cfg.AddressFilter,
 		onRequestHook:          cfg.OnRequestHook,
+		forwardingTable: make(map[peer.ID]map[string]*forwardingState),
 
 		fixLowPeersChan: make(chan struct{}, 1),
 
@@ -373,6 +433,21 @@ func makeDHT(h host.Host, cfg dhtcfg.Config) (*IpfsDHT, error) {
 	}
 
 	dht.rtFreezeTimeout = rtFreezeTimeout
+
+	// Start a cleanup routine
+    go func() {
+        ticker := time.NewTicker(time.Minute * 5)
+        defer ticker.Stop()
+        
+        for {
+            select {
+            case <-ticker.C:
+                dht.cleanupForwardingState(time.Hour) // Clean up entries older than 1 hour
+            case <-dht.ctx.Done():
+                return
+            }
+        }
+    }()
 
 	return dht, nil
 }
