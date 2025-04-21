@@ -52,6 +52,7 @@ type Config struct {
 	QueryPeerFilter        QueryFilterFunc
 	LookupCheckConcurrency int
 	MsgSenderBuilder       func(h host.Host, protos []protocol.ID) pb.MessageSenderWithDisconnect
+	WantForwardingProbability float64 // Probability of forwarding WANT messages to other peers
 
 	RoutingTable struct {
 		RefreshQueryTimeout time.Duration
@@ -120,6 +121,7 @@ var Defaults = func(o *Config) error {
 	o.EnableValues = true
 	o.QueryPeerFilter = EmptyQueryFilter
 	o.MsgSenderBuilder = net.NewMessageSenderImpl
+	o.WantForwardingProbability = 0.5
 
 	o.RoutingTable.LatencyTolerance = 10 * time.Second
 	o.RoutingTable.RefreshQueryTimeout = 10 * time.Second

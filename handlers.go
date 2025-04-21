@@ -63,7 +63,7 @@ func (dht *IpfsDHT) handleWant(ctx context.Context, p peer.ID, pmes *pb.Message)
 	key := string(k)
 
 	// create random number
-	if weightedCoinFlip(0.5) {
+	if weightedCoinFlip(dht.WantForwardingProbability) {
 		// forward message
 		peers := dht.routingTable.ListPeers()
 		if len(peers) == 0 {
