@@ -1,0 +1,5 @@
+.docs/
+data/
+.DS_Store
+pb/gen_proto.sh
+pb/gen.go
