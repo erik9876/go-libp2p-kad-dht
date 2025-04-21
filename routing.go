@@ -690,3 +690,80 @@ func (dht *IpfsDHT) FindPeer(ctx context.Context, id peer.ID) (pi peer.AddrInfo,
 
 	return peer.AddrInfo{}, routing.ErrNotFound
 }
+
+// WantValueFromPeers tries to retrieve the value by sending WANT requests to multiple peers.
+// This uses the random forwarding pattern of WANT messages to distribute the query.
+func (dht *IpfsDHT) WantValueFromPeers(ctx context.Context, key string, count int) ([]byte, error) {
+	ctx, span := internal.StartSpan(ctx, "IpfsDHT.WantValueFromPeers", trace.WithAttributes(internal.KeyAsAttribute("Key", key)))
+	defer span.End()
+
+	logger.Debugw("want value from peers", "key", internal.LoggableRecordKeyString(key))
+
+	// First check if we have it locally
+	if rec, err := dht.getLocal(ctx, key); rec != nil && err == nil {
+		logger.Debugw("found value locally", "key", internal.LoggableRecordKeyString(key))
+		return rec.GetValue(), nil
+	}
+
+	// Get some peers to send WANT requests to
+	peers, err := dht.GetClosestPeers(ctx, key)
+	if err != nil {
+		logger.Debugw("error getting closest peers", "error", err)
+		return nil, err
+	}
+
+	if len(peers) == 0 {
+		logger.Debug("no peers found")
+		return nil, routing.ErrNotFound
+	}
+
+	// Limit the number of peers to query
+	if len(peers) > count && count > 0 {
+		peers = peers[:count]
+	}
+
+	// Create channels for collecting results
+	type result struct {
+		value []byte
+		err   error
+	}
+	resultCh := make(chan result, len(peers))
+
+	// Send WANT requests in parallel
+	var wg sync.WaitGroup
+	for _, p := range peers {
+		wg.Add(1)
+		go func(p peer.ID) {
+			defer wg.Done()
+			val, err := dht.WantValue(ctx, p, key)
+			select {
+			case resultCh <- result{value: val, err: err}:
+			case <-ctx.Done():
+			}
+		}(p)
+	}
+
+	// Wait for all requests to complete in a separate goroutine
+	go func() {
+		wg.Wait()
+		close(resultCh)
+	}()
+
+	// Collect and validate results
+	var lastError error
+	for r := range resultCh {
+		if r.err != nil {
+			lastError = r.err
+			continue
+		}
+		if r.value != nil {
+			return r.value, nil
+		}
+	}
+
+	// Return error if we didn't get a value
+	if lastError != nil {
+		return nil, lastError
+	}
+	return nil, routing.ErrNotFound
+}

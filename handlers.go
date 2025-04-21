@@ -136,6 +136,10 @@ func (dht *IpfsDHT) handleGetValue(ctx context.Context, p peer.ID, pmes *pb.Mess
 			logger.Debugw("failed to forward GET_VALUE response", "error", err, "to", destination)
 			return nil, err
 		}
+
+		// Remove the forwarding state after using it
+		dht.removeForwardingState(p, key)
+
 		// We've forwarded the response, no need to process it further
 		return nil, nil
 	}
