@@ -177,6 +177,9 @@ type IpfsDHT struct {
 	// Map from the peer we forwarded to -> key -> forwarding state
     forwardingTable     map[peer.ID]map[string]*forwardingState
     forwardingTableLock sync.RWMutex  // protect concurrent access
+
+    // Probability that a WANT is forwarded
+    WantForwardingProbability float64
 }
 
 // saveForwardingState saves the information about where to forward responses
@@ -370,7 +373,8 @@ func makeDHT(h host.Host, cfg dhtcfg.Config) (*IpfsDHT, error) {
 		rtPeerDiversityFilter:  cfg.RoutingTable.DiversityFilter,
 		addrFilter:             cfg.AddressFilter,
 		onRequestHook:          cfg.OnRequestHook,
-		forwardingTable: make(map[peer.ID]map[string]*forwardingState),
+		forwardingTable:        make(map[peer.ID]map[string]*forwardingState),
+		WantForwardingProbability: cfg.WantForwardingProbability,
 
 		fixLowPeersChan: make(chan struct{}, 1),
 
