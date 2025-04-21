@@ -30,6 +30,8 @@ import (
 	record "github.com/libp2p/go-libp2p-record"
 	recpb "github.com/libp2p/go-libp2p-record/pb"
 
+	"bytes"
+
 	ds "github.com/ipfs/go-datastore"
 	logging "github.com/ipfs/go-log/v2"
 	"github.com/multiformats/go-base32"
@@ -211,6 +213,18 @@ func (dht *IpfsDHT) getForwardingDestination(from peer.ID, key string) (peer.ID,
         }
     }
     return "", false
+}
+
+func (dht *IpfsDHT) removeForwardingState(from peer.ID, key string) {
+    dht.forwardingTableLock.Lock()
+    defer dht.forwardingTableLock.Unlock()
+    
+    if states, exists := dht.forwardingTable[from]; exists {
+        delete(states, key)
+        if len(states) == 0 {
+            delete(dht.forwardingTable, from)
+        }
+    }
 }
 
 // cleanupForwardingState removes old forwarding entries
@@ -1019,4 +1033,55 @@ func (dht *IpfsDHT) filterAddrs(addrs []ma.Multiaddr) []ma.Multiaddr {
 		return f(addrs)
 	}
 	return addrs
+}
+
+// WantValue sends a WANT request to a specific peer to retrieve a value for a given key.
+// It will wait for a response or until the context is canceled.
+func (dht *IpfsDHT) WantValue(ctx context.Context, p peer.ID, key string) ([]byte, error) {
+	logger.Debugw("sending WANT request", "to", p, "key", internal.LoggableRecordKeyString(key))
+	
+	// Create a WANT message with the key
+	pmes := pb.NewMessage(pb.Message_WANT, []byte(key), 0)
+	
+	// Send the request and wait for response
+	resp, err := dht.msgSender.SendRequest(ctx, p, pmes)
+	if err != nil {
+		logger.Debugw("WANT request failed", "error", err, "to", p)
+		return nil, err
+	}
+	
+	// A nil response means we didn't get an immediate answer (peer is forwarding)
+	if resp == nil {
+		logger.Debugw("WANT request forwarded, no immediate response", "to", p)
+		return nil, nil
+	}
+	
+	// Check if the response contains a record
+	rec := resp.GetRecord()
+	if rec == nil {
+		logger.Debugw("WANT response has no record", "from", p)
+		return nil, nil
+	}
+	
+	// Validate the received record
+	val := rec.GetValue()
+	if val == nil {
+		logger.Debugw("received a nil record value", "from", p)
+		return nil, nil
+	}
+	
+	// Validate the record key matches the requested key
+	if !bytes.Equal([]byte(key), rec.GetKey()) {
+		return nil, fmt.Errorf("received record with wrong key: expected %s, got %s", 
+			key, string(rec.GetKey()))
+	}
+	
+	// Validate the record value
+	if err := dht.Validator.Validate(key, val); err != nil {
+		logger.Debugw("received invalid record", "error", err, "from", p)
+		return nil, err
+	}
+	
+	logger.Debugw("WANT request successful", "from", p, "key", internal.LoggableRecordKeyString(key))
+	return val, nil
 }
