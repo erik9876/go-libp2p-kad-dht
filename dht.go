@@ -180,6 +180,9 @@ type IpfsDHT struct {
     forwardingTable     map[peer.ID]map[string]*forwardingState
     forwardingTableLock sync.RWMutex  // protect concurrent access
 
+	// reduce risk of DoS attacks by limiting the number of pending forwards per peer
+	maxPendingForwardsPerPeer int
+
     // Probability that a WANT is forwarded
     WantForwardingProbability float64
 }
@@ -188,6 +191,17 @@ type IpfsDHT struct {
 func (dht *IpfsDHT) saveForwardingState(from peer.ID, to peer.ID, key string) {
     dht.forwardingTableLock.Lock()
     defer dht.forwardingTableLock.Unlock()
+
+	pendingForwardsPerPeer := make(map[peer.ID]int)
+    for _, states := range dht.forwardingTable {
+        for _, state := range states {
+            pendingForwardsPerPeer[state.destination]++
+        }
+    }
+
+	if pendingForwardsPerPeer[to] >= dht.maxPendingForwardsPerPeer {
+		return
+	}
     
     // Initialize the nested map if it doesn't exist
     if dht.forwardingTable[from] == nil {
@@ -388,6 +402,7 @@ func makeDHT(h host.Host, cfg dhtcfg.Config) (*IpfsDHT, error) {
 		addrFilter:             cfg.AddressFilter,
 		onRequestHook:          cfg.OnRequestHook,
 		forwardingTable:        make(map[peer.ID]map[string]*forwardingState),
+		maxPendingForwardsPerPeer: 15,
 		WantForwardingProbability: cfg.WantForwardingProbability,
 
 		fixLowPeersChan: make(chan struct{}, 1),
