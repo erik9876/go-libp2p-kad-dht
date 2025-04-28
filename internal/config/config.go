@@ -121,7 +121,7 @@ var Defaults = func(o *Config) error {
 	o.EnableValues = true
 	o.QueryPeerFilter = EmptyQueryFilter
 	o.MsgSenderBuilder = net.NewMessageSenderImpl
-	o.WantForwardingProbability = 0.5
+	o.WantForwardingProbability = 0.7
 
 	o.RoutingTable.LatencyTolerance = 10 * time.Second
 	o.RoutingTable.RefreshQueryTimeout = 10 * time.Second
