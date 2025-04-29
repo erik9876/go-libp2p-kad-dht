@@ -54,6 +54,8 @@ func (dht *IpfsDHT) handlerForMsgType(t pb.Message_MessageType) dhtHandler {
 }
 
 func (dht *IpfsDHT) handleWant(ctx context.Context, p peer.ID, pmes *pb.Message) (_ *pb.Message, err error) {
+	logger.Debugw("handleWant", "from", p)
+
 	// first, is there even a key?
 	k := pmes.GetKey()
 	if len(k) == 0 {
@@ -61,9 +63,14 @@ func (dht *IpfsDHT) handleWant(ctx context.Context, p peer.ID, pmes *pb.Message)
 	}
 
 	key := string(k)
+	logger.Debugw("handleWant", "key", key)
+
+	forwardingDecision := weightedCoinFlip(dht.WantForwardingProbability)
+	logger.Debugw("handleWant", "forwardingDecision", forwardingDecision)
 
 	// create random number
-	if weightedCoinFlip(dht.WantForwardingProbability) {
+	if forwardingDecision {
+		logger.Debugw("handleWant", "forwarding")
 		// forward message
 		peers := dht.routingTable.ListPeers()
 		if len(peers) == 0 {
@@ -73,6 +80,8 @@ func (dht *IpfsDHT) handleWant(ctx context.Context, p peer.ID, pmes *pb.Message)
 		randIndex := rand.Int() % len(peers)
 
 		nextPeer := peers[randIndex]
+		logger.Debugw("handleWant", "forwarding to", nextPeer, "originalRequester", p, "key", key)
+
 		dht.saveForwardingState(nextPeer, p, key)
 
 		// Forward WANT Message to nextPeer
@@ -82,6 +91,7 @@ func (dht *IpfsDHT) handleWant(ctx context.Context, p peer.ID, pmes *pb.Message)
             return nil, err
         }
 	} else {
+		logger.Debugw("handleWant", "initiate get")
 		// initiate get
 		val, err := dht.GetValue(ctx, key)
 		if err != nil {
@@ -107,7 +117,7 @@ func (dht *IpfsDHT) handleWant(ctx context.Context, p peer.ID, pmes *pb.Message)
 			
 			logger.Debugw("found and sent value to requester", "key", key, "to", p)
 		} else {
-			logger.Debugw("no value found for key", "key", key)
+			logger.Debugw("no value found for key", "key", key, "requester", p)
 		}
 	}
 

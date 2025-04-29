@@ -192,6 +192,8 @@ func (dht *IpfsDHT) saveForwardingState(from peer.ID, to peer.ID, key string) {
     dht.forwardingTableLock.Lock()
     defer dht.forwardingTableLock.Unlock()
 
+	logger.Debugw("saveForwardingState", "from", from, "to", to, "key", key)
+
 	pendingForwardsPerPeer := make(map[peer.ID]int)
     for _, states := range dht.forwardingTable {
         for _, state := range states {
@@ -199,7 +201,11 @@ func (dht *IpfsDHT) saveForwardingState(from peer.ID, to peer.ID, key string) {
         }
     }
 
-	if pendingForwardsPerPeer[to] >= dht.maxPendingForwardsPerPeer {
+	pendingForwards := pendingForwardsPerPeer[to]
+	logger.Debugw("saveForwardingState", "pendingForwards", pendingForwards)
+
+	if pendingForwards >= dht.maxPendingForwardsPerPeer {
+		logger.Debugw("saveForwardingState", "peer", to, "max pending forwards reached", pendingForwards)
 		return
 	}
     
@@ -223,6 +229,7 @@ func (dht *IpfsDHT) getForwardingDestination(from peer.ID, key string) (peer.ID,
     
     if states, exists := dht.forwardingTable[from]; exists {
         if state, exists := states[key]; exists {
+			logger.Debugw("getForwardingDestination", "from", from, "key", key, "destination", state.destination)
             return state.destination, true
         }
     }
@@ -235,10 +242,13 @@ func (dht *IpfsDHT) removeForwardingState(from peer.ID, key string) {
     
     if states, exists := dht.forwardingTable[from]; exists {
         delete(states, key)
+		logger.Debugw("removeForwardingState", "from", from, "key", key)
         if len(states) == 0 {
             delete(dht.forwardingTable, from)
         }
-    }
+    } else {
+		logger.Debugw("removeForwardingState", "from", from, "key", key, "not found")
+	}
 }
 
 // cleanupForwardingState removes old forwarding entries
@@ -250,6 +260,7 @@ func (dht *IpfsDHT) cleanupForwardingState(maxAge time.Duration) {
     for from, states := range dht.forwardingTable {
         for key, state := range states {
             if now.Sub(state.timestamp) > maxAge {
+				logger.Debugw("cleanupForwardingState", "from", from, "key", key, "timestamp", state.timestamp, "maxAge", maxAge)
                 delete(states, key)
             }
         }
@@ -475,6 +486,7 @@ func makeDHT(h host.Host, cfg dhtcfg.Config) (*IpfsDHT, error) {
         for {
             select {
             case <-ticker.C:
+				logger.Debugw("cleanupForwardingState", "cleaning up forwarding state", time.Now())
                 dht.cleanupForwardingState(time.Hour) // Clean up entries older than 1 hour
             case <-dht.ctx.Done():
                 return
@@ -1064,6 +1076,8 @@ func (dht *IpfsDHT) WantValue(ctx context.Context, p peer.ID, key string) ([]byt
 		logger.Debugw("WANT request failed", "error", err, "to", p)
 		return nil, err
 	}
+
+	logger.Debugw("received WANT response", "from", p, "nilResponse", resp == nil)
 	
 	// A nil response means we didn't get an immediate answer (peer is forwarding)
 	if resp == nil {
@@ -1087,6 +1101,7 @@ func (dht *IpfsDHT) WantValue(ctx context.Context, p peer.ID, key string) ([]byt
 	
 	// Validate the record key matches the requested key
 	if !bytes.Equal([]byte(key), rec.GetKey()) {
+		logger.Debugw("received record with wrong key", "expected", key, "got", string(rec.GetKey()), "from", p)
 		return nil, fmt.Errorf("received record with wrong key: expected %s, got %s", 
 			key, string(rec.GetKey()))
 	}
