@@ -384,7 +384,7 @@ func OnRequestHook(f func(ctx context.Context, s network.Stream, req *pb.Message
 
 // WantForwardingProbability configures the probability of forwarding WANT messages to other peers.
 // The value should be between 0 and 1, where 0 means never forward and 1 means always forward.
-// Default: 0.5
+// Default: 0.7
 func WantForwardingProbability(prob float64) Option {
 	return func(c *dhtcfg.Config) error {
 		if prob < 0 || prob > 1 {

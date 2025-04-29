@@ -737,6 +737,7 @@ func (dht *IpfsDHT) WantValueFromPeers(ctx context.Context, key string, count in
 		wg.Add(1)
 		go func(p peer.ID) {
 			defer wg.Done()
+			logger.Debugw("sending WANT to peer", "peer", p, "key", internal.LoggableRecordKeyString(key))
 			val, err := dht.WantValue(ctx, p, key)
 			select {
 			case resultCh <- result{value: val, err: err}:
@@ -755,6 +756,7 @@ func (dht *IpfsDHT) WantValueFromPeers(ctx context.Context, key string, count in
 	var lastError error
 	for r := range resultCh {
 		if r.err != nil {
+        	logger.Debugw("WANT request failed", "error", r.err)
 			lastError = r.err
 			continue
 		}
