@@ -2,7 +2,7 @@
 // versions:
 // 	protoc-gen-go v1.36.3
 // 	protoc        v5.29.2
-// source: github.com/libp2p/go-libp2p-kad-dht/pb/dht.proto
+// source: github.com/erik9876/go-libp2p-kad-dht/pb/dht.proto
 
 package dht_pb
 

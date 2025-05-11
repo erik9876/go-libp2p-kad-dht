@@ -14,7 +14,7 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
 
-	"github.com/libp2p/go-libp2p-kad-dht/internal"
+	"github.com/erik9876/go-libp2p-kad-dht/internal"
 )
 
 var logger = logging.Logger("dht")

@@ -3,7 +3,7 @@ package crawler
 import (
 	"time"
 
-	"github.com/libp2p/go-libp2p-kad-dht/amino"
+	"github.com/erik9876/go-libp2p-kad-dht/amino"
 	"github.com/libp2p/go-libp2p/core/protocol"
 )
 

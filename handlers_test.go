@@ -8,8 +8,8 @@ import (
 	"testing"
 	"time"
 
+	pb "github.com/erik9876/go-libp2p-kad-dht/pb"
 	"github.com/libp2p/go-libp2p"
-	pb "github.com/libp2p/go-libp2p-kad-dht/pb"
 	recpb "github.com/libp2p/go-libp2p-record/pb"
 	crypto "github.com/libp2p/go-libp2p/core/crypto"
 	peer "github.com/libp2p/go-libp2p/core/peer"

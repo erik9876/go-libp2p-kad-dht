@@ -5,10 +5,10 @@ import (
 	"testing"
 	"time"
 
+	dht "github.com/erik9876/go-libp2p-kad-dht"
+	"github.com/erik9876/go-libp2p-kad-dht/internal"
+	test "github.com/erik9876/go-libp2p-kad-dht/internal/testing"
 	"github.com/ipfs/go-cid"
-	dht "github.com/libp2p/go-libp2p-kad-dht"
-	"github.com/libp2p/go-libp2p-kad-dht/internal"
-	test "github.com/libp2p/go-libp2p-kad-dht/internal/testing"
 	record "github.com/libp2p/go-libp2p-record"
 	"github.com/libp2p/go-libp2p/core/host"
 	"github.com/libp2p/go-libp2p/core/peer"

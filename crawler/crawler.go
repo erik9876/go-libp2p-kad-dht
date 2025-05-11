@@ -13,7 +13,7 @@ import (
 	logging "github.com/ipfs/go-log/v2"
 	"github.com/libp2p/go-msgio/pbio"
 
-	pb "github.com/libp2p/go-libp2p-kad-dht/pb"
+	pb "github.com/erik9876/go-libp2p-kad-dht/pb"
 	kbucket "github.com/libp2p/go-libp2p-kbucket"
 )
 

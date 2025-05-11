@@ -14,9 +14,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/libp2p/go-libp2p-kad-dht/internal"
-	"github.com/libp2p/go-libp2p-kad-dht/internal/net"
-	"github.com/libp2p/go-libp2p-kad-dht/providers"
+	"github.com/erik9876/go-libp2p-kad-dht/internal"
+	"github.com/erik9876/go-libp2p-kad-dht/internal/net"
+	"github.com/erik9876/go-libp2p-kad-dht/providers"
 	"github.com/libp2p/go-libp2p/core/crypto"
 	"github.com/libp2p/go-libp2p/core/event"
 	"github.com/libp2p/go-libp2p/core/network"
@@ -34,8 +34,8 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	test "github.com/libp2p/go-libp2p-kad-dht/internal/testing"
-	pb "github.com/libp2p/go-libp2p-kad-dht/pb"
+	test "github.com/erik9876/go-libp2p-kad-dht/internal/testing"
+	pb "github.com/erik9876/go-libp2p-kad-dht/pb"
 
 	"github.com/ipfs/go-cid"
 	detectrace "github.com/ipfs/go-detect-race"
@@ -416,7 +416,7 @@ func TestContextShutDown(t *testing.T) {
 }
 
 func TestSearchValue(t *testing.T) {
-	t.Skip("This test is flaky, see https://github.com/libp2p/go-libp2p-kad-dht/issues/723.")
+	t.Skip("This test is flaky, see https://github.com/erik9876/go-libp2p-kad-dht/issues/723.")
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()

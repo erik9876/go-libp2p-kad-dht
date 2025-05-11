@@ -15,9 +15,9 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/trace"
 
+	"github.com/erik9876/go-libp2p-kad-dht/internal"
+	"github.com/erik9876/go-libp2p-kad-dht/qpeerset"
 	"github.com/google/uuid"
-	"github.com/libp2p/go-libp2p-kad-dht/internal"
-	"github.com/libp2p/go-libp2p-kad-dht/qpeerset"
 	kb "github.com/libp2p/go-libp2p-kbucket"
 )
 

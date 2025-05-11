@@ -21,9 +21,9 @@ import (
 	"go.opencensus.io/stats"
 	"go.opencensus.io/tag"
 
-	"github.com/libp2p/go-libp2p-kad-dht/internal"
-	"github.com/libp2p/go-libp2p-kad-dht/metrics"
-	pb "github.com/libp2p/go-libp2p-kad-dht/pb"
+	"github.com/erik9876/go-libp2p-kad-dht/internal"
+	"github.com/erik9876/go-libp2p-kad-dht/metrics"
+	pb "github.com/erik9876/go-libp2p-kad-dht/pb"
 )
 
 var dhtReadMessageTimeout = 10 * time.Second

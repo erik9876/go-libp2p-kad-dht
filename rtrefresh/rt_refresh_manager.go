@@ -7,9 +7,9 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/erik9876/go-libp2p-kad-dht/internal"
 	"github.com/hashicorp/go-multierror"
 	logging "github.com/ipfs/go-log/v2"
-	"github.com/libp2p/go-libp2p-kad-dht/internal"
 	kbucket "github.com/libp2p/go-libp2p-kbucket"
 	"github.com/libp2p/go-libp2p/core/host"
 	"github.com/libp2p/go-libp2p/core/peer"

@@ -5,9 +5,9 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/libp2p/go-libp2p-kad-dht/internal"
-	"github.com/libp2p/go-libp2p-kad-dht/metrics"
-	"github.com/libp2p/go-libp2p-kad-dht/qpeerset"
+	"github.com/erik9876/go-libp2p-kad-dht/internal"
+	"github.com/erik9876/go-libp2p-kad-dht/metrics"
+	"github.com/erik9876/go-libp2p-kad-dht/qpeerset"
 	kb "github.com/libp2p/go-libp2p-kbucket"
 	"github.com/libp2p/go-libp2p/core/peer"
 	"github.com/libp2p/go-libp2p/core/routing"
