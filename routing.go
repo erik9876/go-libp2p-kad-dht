@@ -721,6 +721,7 @@ func (dht *IpfsDHT) WantValueFromPeers(ctx context.Context, key string, count in
 	if len(peers) > count && count > 0 {
 		peers = peers[:count]
 	}
+	logger.Infow("want value from peers", "peers", peers)
 
 	// Create channels for collecting results
 	type result struct {
