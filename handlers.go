@@ -70,7 +70,7 @@ func (dht *IpfsDHT) handleWant(ctx context.Context, p peer.ID, pmes *pb.Message)
 
 	// create random number
 	if forwardingDecision {
-		logger.Infow("handleWant", "forwarding")
+		logger.Info("handleWant forwarding")
 		// forward message
 		peers := dht.routingTable.ListPeers()
 		if len(peers) == 0 {
@@ -91,7 +91,7 @@ func (dht *IpfsDHT) handleWant(ctx context.Context, p peer.ID, pmes *pb.Message)
             return nil, err
         }
 	} else {
-		logger.Infow("handleWant", "initiate get")
+		logger.Info("handleWant initiate get")
 		// initiate get
 		val, err := dht.GetValue(ctx, key)
 		if err != nil {
