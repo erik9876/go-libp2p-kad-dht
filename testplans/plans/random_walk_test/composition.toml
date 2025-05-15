@@ -1,0 +1,9 @@
+[global]
+plan = "random_walk_test"
+case = "random_walk_test"
+builder = "docker:go"
+runner = "local:docker"
+
+[[groups]]
+id = "default"
+instances.count = 25
