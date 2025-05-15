@@ -697,18 +697,18 @@ func (dht *IpfsDHT) WantValueFromPeers(ctx context.Context, key string, count in
 	ctx, span := internal.StartSpan(ctx, "IpfsDHT.WantValueFromPeers", trace.WithAttributes(internal.KeyAsAttribute("Key", key)))
 	defer span.End()
 
-	logger.Debugw("want value from peers", "key", internal.LoggableRecordKeyString(key))
+	logger.Infow("want value from peers", "key", internal.LoggableRecordKeyString(key))
 
 	// First check if we have it locally
 	if rec, err := dht.getLocal(ctx, key); rec != nil && err == nil {
-		logger.Debugw("found value locally", "key", internal.LoggableRecordKeyString(key))
+		logger.Infow("found value locally", "key", internal.LoggableRecordKeyString(key))
 		return rec.GetValue(), nil
 	}
 
 	// Get some peers to send WANT requests to
 	peers, err := dht.GetClosestPeers(ctx, key)
 	if err != nil {
-		logger.Debugw("error getting closest peers", "error", err)
+		logger.Infow("error getting closest peers", "error", err)
 		return nil, err
 	}
 
@@ -735,7 +735,7 @@ func (dht *IpfsDHT) WantValueFromPeers(ctx context.Context, key string, count in
 		wg.Add(1)
 		go func(p peer.ID) {
 			defer wg.Done()
-			logger.Debugw("sending WANT to peer", "peer", p, "key", internal.LoggableRecordKeyString(key))
+			logger.Infow("sending WANT to peer", "peer", p, "key", internal.LoggableRecordKeyString(key))
 			val, err := dht.WantValue(ctx, p, key)
 			select {
 			case resultCh <- result{value: val, err: err}:
@@ -754,7 +754,7 @@ func (dht *IpfsDHT) WantValueFromPeers(ctx context.Context, key string, count in
 	var lastError error
 	for r := range resultCh {
 		if r.err != nil {
-        	logger.Debugw("WANT request failed", "error", r.err)
+        	logger.Infow("WANT request failed", "error", r.err)
 			lastError = r.err
 			continue
 		}

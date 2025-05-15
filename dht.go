@@ -192,7 +192,7 @@ func (dht *IpfsDHT) saveForwardingState(from peer.ID, to peer.ID, key string) {
     dht.forwardingTableLock.Lock()
     defer dht.forwardingTableLock.Unlock()
 
-	logger.Debugw("saveForwardingState", "from", from, "to", to, "key", key)
+	logger.Infow("saveForwardingState", "from", from, "to", to, "key", key)
 
 	pendingForwardsPerPeer := make(map[peer.ID]int)
     for _, states := range dht.forwardingTable {
@@ -202,10 +202,10 @@ func (dht *IpfsDHT) saveForwardingState(from peer.ID, to peer.ID, key string) {
     }
 
 	pendingForwards := pendingForwardsPerPeer[to]
-	logger.Debugw("saveForwardingState", "pendingForwards", pendingForwards)
+	logger.Infow("saveForwardingState", "pendingForwards", pendingForwards)
 
 	if pendingForwards >= dht.maxPendingForwardsPerPeer {
-		logger.Debugw("saveForwardingState", "peer", to, "max pending forwards reached", pendingForwards)
+		logger.Infow("saveForwardingState", "peer", to, "max pending forwards reached", pendingForwards)
 		return
 	}
     
@@ -229,7 +229,7 @@ func (dht *IpfsDHT) getForwardingDestination(from peer.ID, key string) (peer.ID,
     
     if states, exists := dht.forwardingTable[from]; exists {
         if state, exists := states[key]; exists {
-			logger.Debugw("getForwardingDestination", "from", from, "key", key, "destination", state.destination)
+			logger.Infow("getForwardingDestination", "from", from, "key", key, "destination", state.destination)
             return state.destination, true
         }
     }
@@ -242,12 +242,12 @@ func (dht *IpfsDHT) removeForwardingState(from peer.ID, key string) {
     
     if states, exists := dht.forwardingTable[from]; exists {
         delete(states, key)
-		logger.Debugw("removeForwardingState", "from", from, "key", key)
+		logger.Infow("removeForwardingState", "from", from, "key", key)
         if len(states) == 0 {
             delete(dht.forwardingTable, from)
         }
     } else {
-		logger.Debugw("removeForwardingState", "from", from, "key", key, "not found")
+		logger.Infow("removeForwardingState", "from", from, "key", key, "not found")
 	}
 }
 
@@ -260,7 +260,7 @@ func (dht *IpfsDHT) cleanupForwardingState(maxAge time.Duration) {
     for from, states := range dht.forwardingTable {
         for key, state := range states {
             if now.Sub(state.timestamp) > maxAge {
-				logger.Debugw("cleanupForwardingState", "from", from, "key", key, "timestamp", state.timestamp, "maxAge", maxAge)
+				logger.Infow("cleanupForwardingState", "from", from, "key", key, "timestamp", state.timestamp, "maxAge", maxAge)
                 delete(states, key)
             }
         }
@@ -486,7 +486,7 @@ func makeDHT(h host.Host, cfg dhtcfg.Config) (*IpfsDHT, error) {
         for {
             select {
             case <-ticker.C:
-				logger.Debugw("cleanupForwardingState", "cleaning up forwarding state", time.Now())
+				logger.Infow("cleanupForwardingState", "cleaning up forwarding state", time.Now())
                 dht.cleanupForwardingState(time.Hour) // Clean up entries older than 1 hour
             case <-dht.ctx.Done():
                 return
@@ -1065,7 +1065,7 @@ func (dht *IpfsDHT) filterAddrs(addrs []ma.Multiaddr) []ma.Multiaddr {
 // WantValue sends a WANT request to a specific peer to retrieve a value for a given key.
 // It will wait for a response or until the context is canceled.
 func (dht *IpfsDHT) WantValue(ctx context.Context, p peer.ID, key string) ([]byte, error) {
-	logger.Debugw("sending WANT request", "to", p, "key", internal.LoggableRecordKeyString(key))
+	logger.Infow("sending WANT request", "to", p, "key", internal.LoggableRecordKeyString(key))
 	
 	// Create a WANT message with the key
 	pmes := pb.NewMessage(pb.Message_WANT, []byte(key), 0)
@@ -1073,45 +1073,45 @@ func (dht *IpfsDHT) WantValue(ctx context.Context, p peer.ID, key string) ([]byt
 	// Send the request and wait for response
 	resp, err := dht.msgSender.SendRequest(ctx, p, pmes)
 	if err != nil {
-		logger.Debugw("WANT request failed", "error", err, "to", p)
+		logger.Infow("WANT request failed", "error", err, "to", p)
 		return nil, err
 	}
 
-	logger.Debugw("received WANT response", "from", p, "nilResponse", resp == nil)
+	logger.Infow("received WANT response", "from", p, "nilResponse", resp == nil)
 	
 	// A nil response means we didn't get an immediate answer (peer is forwarding)
 	if resp == nil {
-		logger.Debugw("WANT request forwarded, no immediate response", "to", p)
+		logger.Infow("WANT request forwarded, no immediate response", "to", p)
 		return nil, nil
 	}
 	
 	// Check if the response contains a record
 	rec := resp.GetRecord()
 	if rec == nil {
-		logger.Debugw("WANT response has no record", "from", p)
+		logger.Infow("WANT response has no record", "from", p)
 		return nil, nil
 	}
 	
 	// Validate the received record
 	val := rec.GetValue()
 	if val == nil {
-		logger.Debugw("received a nil record value", "from", p)
+		logger.Infow("received a nil record value", "from", p)
 		return nil, nil
 	}
 	
 	// Validate the record key matches the requested key
 	if !bytes.Equal([]byte(key), rec.GetKey()) {
-		logger.Debugw("received record with wrong key", "expected", key, "got", string(rec.GetKey()), "from", p)
+		logger.Infow("received record with wrong key", "expected", key, "got", string(rec.GetKey()), "from", p)
 		return nil, fmt.Errorf("received record with wrong key: expected %s, got %s", 
 			key, string(rec.GetKey()))
 	}
 	
 	// Validate the record value
 	if err := dht.Validator.Validate(key, val); err != nil {
-		logger.Debugw("received invalid record", "error", err, "from", p)
+		logger.Infow("received invalid record", "error", err, "from", p)
 		return nil, err
 	}
 	
-	logger.Debugw("WANT request successful", "from", p, "key", internal.LoggableRecordKeyString(key))
+	logger.Infow("WANT request successful", "from", p, "key", internal.LoggableRecordKeyString(key))
 	return val, nil
 }
