@@ -109,11 +109,21 @@ func (dht *IpfsDHT) handleWant(ctx context.Context, p peer.ID, pmes *pb.Message)
 		dht.saveForwardingState(nextPeer, p, key)
 
 		// Forward WANT Message to nextPeer
-		err = dht.msgSender.SendMessage(ctx, nextPeer, pmes)
+		resp, err := dht.msgSender.SendRequest(ctx, nextPeer, pmes)
         if err != nil {
             logger.Infow("failed to forward WANT message", "error", err, "to", nextPeer)
             return nil, err
         }
+
+		// If we got a response from the forwarded request, forward it back to the original requester
+		if resp != nil && resp.GetRecord() != nil {
+			logger.Infow("forwarding response from forwarded request", "from", nextPeer, "to", p, "key", key)
+			err = dht.msgSender.SendMessage(ctx, p, resp)
+			if err != nil {
+				logger.Infow("failed to forward response back to original requester", "error", err, "to", p)
+				return nil, err
+			}
+		}
 	} else {
 		logger.Info("handleWant initiate get")
 		// initiate get
