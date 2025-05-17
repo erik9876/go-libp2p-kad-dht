@@ -2,6 +2,7 @@ package dht
 
 import (
 	"context"
+	crand "crypto/rand"
 	"fmt"
 	"math"
 	"math/rand"
@@ -374,7 +375,71 @@ func makeDHT(h host.Host, cfg dhtcfg.Config) (*IpfsDHT, error) {
 
 	dht.rtFreezeTimeout = rtFreezeTimeout
 
+	// send dummy messages
+	go func() {
+		ticker := time.NewTicker(time.Second * 10)
+		defer ticker.Stop()
+
+		for {
+			rand.New(rand.NewSource(time.Now().UnixNano()))
+			select {
+			case <-ticker.C:
+				// modify interval between ticks
+				delay := time.Duration(rand.Intn(1000)) * time.Millisecond
+				time.Sleep(delay)
+
+				destination := dht.getRandomPeer()
+				if destination == "" {
+					continue
+				}
+				messageType := dht.getRandomMessageType()
+				key := dht.generateRandomKey()
+				logger.Infow("sending dummy message", "destination", destination, "messageType", messageType, "key", key)
+				message := pb.NewMessage(messageType, key, 0)
+				dht.msgSender.SendMessage(dht.ctx, destination, message)
+			case <-dht.ctx.Done():
+				return
+			}
+		}
+	}()
+
 	return dht, nil
+}
+
+func (dht *IpfsDHT) generateRandomKey() []byte {
+	// Generate a random 32-byte key (256 bits)
+	key := make([]byte, 32)
+	_, err := crand.Read(key)
+	if err != nil {
+		logger.Infow("failed to generate random key", "error", err)
+		
+		r := rand.New(rand.NewSource(time.Now().UnixNano()))
+		r.Read(key)
+	}
+	return key
+}
+
+func (dht *IpfsDHT) getRandomPeer() peer.ID {
+	peers := dht.routingTable.ListPeers()
+	if len(peers) == 0 {
+		logger.Info("no peers in routing table")
+		return ""
+	}
+
+	randIndex := rand.Intn(len(peers))
+	return peers[randIndex]
+}
+
+func (dht *IpfsDHT) getRandomMessageType() pb.Message_MessageType {
+	messageTypes := []pb.Message_MessageType{
+		pb.Message_GET_VALUE,
+		pb.Message_GET_PROVIDERS,
+		pb.Message_FIND_NODE,
+		pb.Message_PING,
+	}
+
+	randIndex := rand.Intn(len(messageTypes))
+	return messageTypes[randIndex]
 }
 
 // lookupCheck performs a lookup request to a remote peer.ID, verifying that it is able to
