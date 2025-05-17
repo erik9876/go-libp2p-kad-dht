@@ -64,22 +64,31 @@ func (dht *IpfsDHT) handleWant(ctx context.Context, p peer.ID, pmes *pb.Message)
 
 	key := string(k)
 	logger.Infow("handleWant", "key", key)
-	// Check if this response needs to be forwarded to another peer
-	if destination, exists := dht.getForwardingDestination(p, key); exists {
-		logger.Infow("forwarding WANT response", "from", p, "to", destination, "key", key)
-		err := dht.msgSender.SendMessage(ctx, destination, pmes)
-		if err != nil {
-			logger.Infow("failed to forward WANT response", "error", err, "to", destination)
-			return nil, err
+
+	// Check if this is a response (has a record) and if it's meant for us
+	if pmes.GetRecord() != nil {
+		// This is a response with a record
+		if destination, exists := dht.getForwardingDestination(p, key); exists {
+			logger.Infow("forwarding WANT response", "from", p, "to", destination, "key", key)
+			err := dht.msgSender.SendMessage(ctx, destination, pmes)
+			if err != nil {
+				logger.Infow("failed to forward WANT response", "error", err, "to", destination)
+				return nil, err
+			}
+
+			// Remove the forwarding state after using it
+			dht.removeForwardingState(p, key)
+
+			// We've forwarded the response, no need to process it further
+			return nil, nil
+		} else {
+			// This is a response meant for us (we're the original requester)
+			logger.Infow("received WANT response", "from", p, "key", key)
+			return pmes, nil
 		}
-
-		// Remove the forwarding state after using it
-		dht.removeForwardingState(p, key)
-
-		// We've forwarded the response, no need to process it further
-		return nil, nil
 	}
 
+	// This is a new WANT request
 	forwardingDecision := weightedCoinFlip(dht.WantForwardingProbability)
 	logger.Infow("handleWant", "forwardingDecision", forwardingDecision)
 
