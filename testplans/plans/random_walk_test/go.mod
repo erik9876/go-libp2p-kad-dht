@@ -3,7 +3,7 @@ module github.com/erik9876/go-libp2p-kad-dht/testplans/plans/random_walk_test
 go 1.23.8
 
 require (
-	github.com/erik9876/go-libp2p-kad-dht v0.0.0-20250515174927-1e4f21e9f862
+	github.com/erik9876/go-libp2p-kad-dht v0.0.0-20250517082157-bc183164748d
 	github.com/ipfs/go-log v1.0.5
 	github.com/libp2p/go-libp2p v0.41.1
 	github.com/testground/sdk-go v0.3.0

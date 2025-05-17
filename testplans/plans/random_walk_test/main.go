@@ -6,6 +6,7 @@ import (
 	"time"
 
 	dht "github.com/erik9876/go-libp2p-kad-dht"
+	"github.com/erik9876/go-libp2p-kad-dht/internal"
 	logging "github.com/ipfs/go-log"
 	libp2p "github.com/libp2p/go-libp2p"
 	crypto "github.com/libp2p/go-libp2p/core/crypto"
@@ -115,44 +116,100 @@ func runRandomWalkTest(runenv *runtime.RunEnv, initCtx *run.InitContext) error {
 
 	barrier("routing_table_ready")
 
-    type transferKey struct{ Key string }
-    keyTopic := sync.NewTopic("dht-key", &transferKey{})
+    // Add a topic to share the peer ID as well for verification
+    type peerInfo struct{ ID peer.ID }
+    peerTopic := sync.NewTopic("peer-info", &peerInfo{})
 
     if seq == 1 {
-        runenv.RecordMessage("putting value")
+        runenv.RecordMessage("PUTTER - Starting put operation")
 
-        dhtKey := "/pk/" + h.ID().String()
+        pubKey := h.Peerstore().PubKey(h.ID())
+        if pubKey == nil {
+            return fmt.Errorf("no public key in peerstore")
+        }
 
-        rawPub, err := crypto.MarshalPublicKey(h.Peerstore().PubKey(h.ID()))
+        id, err := peer.IDFromPublicKey(pubKey)
+        if err != nil {
+            return fmt.Errorf("peer ID from public key failed: %w", err)
+        }
+
+        // Publish our peer ID first so others can verify
+        if _, err := client.Publish(ctx, peerTopic, &peerInfo{ID: id}); err != nil {
+            return fmt.Errorf("publish peer-info failed: %w", err)
+        }
+        runenv.RecordMessage("PUTTER - Published our peer ID: %s", id)
+
+        dhtKey := "/pk/" + string(id)
+        runenv.RecordMessage("PUTTER - Using DHT key: %s", internal.LoggableRecordKeyString(dhtKey))
+        runenv.RecordMessage("PUTTER - Peer ID: %s", id)
+
+        rawPub, err := crypto.MarshalPublicKey(pubKey)
         if err != nil {
             return fmt.Errorf("marshal public key failed: %w", err)
         }
+        runenv.RecordMessage("PUTTER - Marshaled public key length: %d bytes", len(rawPub))
 
         if err := kadDHT.PutValue(ctx, dhtKey, rawPub); err != nil {
             runenv.RecordMessage("PutValue failed: %s", err)
         } else {
-            runenv.RecordMessage("PutValue successful")
+            runenv.RecordMessage("PutValue successful - Stored public key for peer %s", id)
         }
 
-        if _, err := client.Publish(ctx, keyTopic, &transferKey{dhtKey}); err != nil {
-            return fmt.Errorf("publish dht-key failed: %w", err)
+        // Verify we can read back what we just put
+        testVal, err := kadDHT.GetValue(ctx, dhtKey)
+        if err != nil {
+            runenv.RecordMessage("WARNING: Could not verify put by reading back value: %s", err)
+        } else {
+            runenv.RecordMessage("PUTTER - Successfully verified we can read back the value we just put")
+            if len(testVal) != len(rawPub) {
+                runenv.RecordMessage("WARNING: Retrieved value length (%d) differs from what we put (%d)", len(testVal), len(rawPub))
+            }
         }
     }
-
+    time.Sleep(2 * time.Second)
     barrier("put_value")
+
+    if seq == 3 {
+        runenv.RecordMessage("GETTER - Starting get operation")
+
+        // First, get the peer ID that we should be looking for
+        peerCh := make(chan *peerInfo, 1)
+        if _, err := client.Subscribe(ctx, peerTopic, peerCh); err != nil {
+            return fmt.Errorf("subscribe peer-info failed: %w", err)
+        }
+        peerInfo := <-peerCh
+        runenv.RecordMessage("GETTER - Received peer ID to look for: %s", peerInfo.ID)
+
+        targetKey := "/pk/" + string(peerInfo.ID)
+        runenv.RecordMessage("GETTER - Target key: %s", internal.LoggableRecordKeyString(targetKey))
+
+		getCtx, getCancel := context.WithCancel(context.Background())
+        val, err := kadDHT.GetValue(getCtx, targetKey)
+        if err != nil {
+            runenv.RecordMessage("GetValue failed: %s", err)
+        } else {
+            runenv.RecordMessage("GetValue successful, raw value length: %d", len(val))
+        }
+        getCancel()
+    }
+    barrier("get_value")
 
     if seq == 2 {
         runenv.RecordMessage("starting lookup")
 
-        kch := make(chan *transferKey, 1)
-        if _, err := client.Subscribe(ctx, keyTopic, kch); err != nil {
-            return fmt.Errorf("subscribe dht-key failed: %w", err)
+         // First, get the peer ID that we should be looking for
+        peerCh := make(chan *peerInfo, 1)
+        if _, err := client.Subscribe(ctx, peerTopic, peerCh); err != nil {
+            return fmt.Errorf("subscribe peer-info failed: %w", err)
         }
-        tk := <-kch
+        peerInfo := <-peerCh
+        runenv.RecordMessage("GETTER - Received peer ID to look for: %s", peerInfo.ID)
+
+        targetKey := "/pk/" + string(peerInfo.ID)
 
 		wantCtx, wantCancel := context.WithCancel(context.Background())
 		defer wantCancel()
-        val, err := kadDHT.WantValueFromPeers(wantCtx, tk.Key, 1)
+        val, err := kadDHT.WantValueFromPeers(wantCtx, targetKey, 1)
         if err != nil {
             runenv.RecordMessage("lookup failed: %s", err)
         } else {
