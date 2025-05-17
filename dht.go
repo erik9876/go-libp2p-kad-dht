@@ -202,7 +202,7 @@ func (dht *IpfsDHT) saveForwardingState(from peer.ID, to peer.ID, key string) {
     }
 
 	pendingForwards := pendingForwardsPerPeer[to]
-	logger.Infow("saveForwardingState", "pendingForwards", pendingForwards)
+	// logger.Infow("saveForwardingState", "pendingForwards", pendingForwards)
 
 	if pendingForwards >= dht.maxPendingForwardsPerPeer {
 		logger.Infow("saveForwardingState", "peer", to, "max pending forwards reached", pendingForwards)

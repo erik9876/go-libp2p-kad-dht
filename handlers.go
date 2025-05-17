@@ -64,6 +64,21 @@ func (dht *IpfsDHT) handleWant(ctx context.Context, p peer.ID, pmes *pb.Message)
 
 	key := string(k)
 	logger.Infow("handleWant", "key", key)
+	// Check if this response needs to be forwarded to another peer
+	if destination, exists := dht.getForwardingDestination(p, key); exists {
+		logger.Infow("forwarding WANT response", "from", p, "to", destination, "key", key)
+		err := dht.msgSender.SendMessage(ctx, destination, pmes)
+		if err != nil {
+			logger.Infow("failed to forward WANT response", "error", err, "to", destination)
+			return nil, err
+		}
+
+		// Remove the forwarding state after using it
+		dht.removeForwardingState(p, key)
+
+		// We've forwarded the response, no need to process it further
+		return nil, nil
+	}
 
 	forwardingDecision := weightedCoinFlip(dht.WantForwardingProbability)
 	logger.Infow("handleWant", "forwardingDecision", forwardingDecision)
@@ -101,7 +116,7 @@ func (dht *IpfsDHT) handleWant(ctx context.Context, p peer.ID, pmes *pb.Message)
 		
 		// If we found the value, send it back to the requester
 		if val != nil {
-			resp := pb.NewMessage(pb.Message_GET_VALUE, k, pmes.GetClusterLevel())
+			resp := pb.NewMessage(pb.Message_WANT, k, pmes.GetClusterLevel())
 			
 			rec := &recpb.Record{
 				Key:   k,
@@ -135,23 +150,6 @@ func (dht *IpfsDHT) handleGetValue(ctx context.Context, p peer.ID, pmes *pb.Mess
 	k := pmes.GetKey()
 	if len(k) == 0 {
 		return nil, errors.New("handleGetValue but no key was provided")
-	}
-
-	key := string(k)
-	// Check if this response needs to be forwarded to another peer
-	if destination, exists := dht.getForwardingDestination(p, key); exists {
-		logger.Infow("forwarding GET_VALUE response", "from", p, "to", destination, "key", key)
-		err := dht.msgSender.SendMessage(ctx, destination, pmes)
-		if err != nil {
-			logger.Infow("failed to forward GET_VALUE response", "error", err, "to", destination)
-			return nil, err
-		}
-
-		// Remove the forwarding state after using it
-		dht.removeForwardingState(p, key)
-
-		// We've forwarded the response, no need to process it further
-		return nil, nil
 	}
 
 	// setup response
