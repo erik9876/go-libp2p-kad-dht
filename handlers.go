@@ -84,6 +84,7 @@ func (dht *IpfsDHT) handleWant(ctx context.Context, p peer.ID, pmes *pb.Message)
 		} else {
 			// This is a response meant for us (we're the original requester)
 			logger.Infow("received WANT response", "from", p, "key", key)
+			// Return the response directly to be handled by the request-response mechanism
 			return pmes, nil
 		}
 	}
@@ -115,14 +116,11 @@ func (dht *IpfsDHT) handleWant(ctx context.Context, p peer.ID, pmes *pb.Message)
             return nil, err
         }
 
-		// If we got a response from the forwarded request, forward it back to the original requester
+		// If we got a response from the forwarded request, return it directly
+		// This will be sent back through the original request-response stream
 		if resp != nil && resp.GetRecord() != nil {
-			logger.Infow("forwarding response from forwarded request", "from", nextPeer, "to", p, "key", key)
-			err = dht.msgSender.SendMessage(ctx, p, resp)
-			if err != nil {
-				logger.Infow("failed to forward response back to original requester", "error", err, "to", p)
-				return nil, err
-			}
+			logger.Infow("got response from forwarded request", "from", nextPeer, "key", key)
+			return resp, nil
 		}
 	} else {
 		logger.Info("handleWant initiate get")
@@ -133,7 +131,7 @@ func (dht *IpfsDHT) handleWant(ctx context.Context, p peer.ID, pmes *pb.Message)
 			return nil, err
 		}
 		
-		// If we found the value, send it back to the requester
+		// If we found the value, return it directly through the request-response stream
 		if val != nil {
 			resp := pb.NewMessage(pb.Message_WANT, k, pmes.GetClusterLevel())
 			
@@ -143,15 +141,11 @@ func (dht *IpfsDHT) handleWant(ctx context.Context, p peer.ID, pmes *pb.Message)
 			}
 			resp.Record = rec
 			
-			err = dht.msgSender.SendMessage(ctx, p, resp)
-			if err != nil {
-				logger.Infow("failed to send value to requester", "error", err, "to", p)
-				return nil, err
-			}
-			
-			logger.Infow("found and sent value to requester", "key", key, "to", p)
+			logger.Infow("found value, returning response", "key", key)
+			return resp, nil
 		} else {
-			logger.Infow("no value found for key", "key", key, "requester", p)
+			logger.Infow("no value found for key", "key", key)
+			return nil, nil
 		}
 	}
 
