@@ -55,6 +55,7 @@ func (dht *IpfsDHT) handlerForMsgType(t pb.Message_MessageType) dhtHandler {
 
 func (dht *IpfsDHT) handleWant(ctx context.Context, p peer.ID, pmes *pb.Message) (_ *pb.Message, err error) {
 	logger.Infow("handleWant", "from", p)
+	time.Sleep(10 * time.Millisecond)
 
 	// first, is there even a key?
 	k := pmes.GetKey()
@@ -91,6 +92,7 @@ func (dht *IpfsDHT) handleWant(ctx context.Context, p peer.ID, pmes *pb.Message)
             logger.Infow("failed to forward WANT message", "error", err, "to", nextPeer)
             return nil, err
         }
+		time.Sleep(10 * time.Millisecond)
 
 		// If we got a response from the forwarded request, return it directly
 		// This will be sent back through the original request-response stream
@@ -113,6 +115,7 @@ func (dht *IpfsDHT) handleWant(ctx context.Context, p peer.ID, pmes *pb.Message)
 			resp.Record = rec
 			return resp, nil
 		}
+		time.Sleep(10 * time.Millisecond)
 		logger.Info("handleWant no value in local datastore, initiate get")
 		// initiate get
 		val, err := dht.GetValue(ctx, key)
@@ -120,6 +123,7 @@ func (dht *IpfsDHT) handleWant(ctx context.Context, p peer.ID, pmes *pb.Message)
 			logger.Infow("failed to get value", "error", err, "key", internal.LoggableRecordKeyString(key))
 			return nil, err
 		}
+		time.Sleep(10 * time.Millisecond)
 		
 		// If we found the value, return it directly through the request-response stream
 		if val != nil {
