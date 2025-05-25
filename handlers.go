@@ -28,8 +28,6 @@ func (dht *IpfsDHT) handlerForMsgType(t pb.Message_MessageType) dhtHandler {
 		return dht.handleFindPeer
 	case pb.Message_PING:
 		return dht.handlePing
-	case pb.Message_WANT:
-		return dht.handleWant
 	}
 
 	if dht.enableValues {
@@ -38,6 +36,8 @@ func (dht *IpfsDHT) handlerForMsgType(t pb.Message_MessageType) dhtHandler {
 			return dht.handleGetValue
 		case pb.Message_PUT_VALUE:
 			return dht.handlePutValue
+		case pb.Message_WANT:
+			return dht.handleWant
 		}
 	}
 
@@ -63,7 +63,7 @@ func (dht *IpfsDHT) handleWant(ctx context.Context, p peer.ID, pmes *pb.Message)
 	}
 
 	key := string(k)
-	logger.Infow("handleWant", "key", key)
+	logger.Infow("handleWant", "key", internal.LoggableRecordKeyString(key))
 
 	forwardingDecision := weightedCoinFlip(dht.WantForwardingProbability)
 	logger.Infow("handleWant", "forwardingDecision", forwardingDecision)
@@ -77,10 +77,11 @@ func (dht *IpfsDHT) handleWant(ctx context.Context, p peer.ID, pmes *pb.Message)
 			return nil, fmt.Errorf("no peers in routing table")
 		}
 
-		randIndex := rand.Int() % len(peers)
+		// randIndex := rand.Int() % len(peers)
 
-		nextPeer := peers[randIndex]
-		logger.Infow("handleWant", "forwarding to", nextPeer, "originalRequester", p, "key", key)
+		// nextPeer := peers[randIndex]
+		nextPeer := p
+		logger.Infow("handleWant", "forwarding to", nextPeer, "originalRequester", p, "key", internal.LoggableRecordKeyString(key))
 
 		// dht.saveForwardingState(nextPeer, p, key)
 
@@ -94,7 +95,7 @@ func (dht *IpfsDHT) handleWant(ctx context.Context, p peer.ID, pmes *pb.Message)
 		// If we got a response from the forwarded request, return it directly
 		// This will be sent back through the original request-response stream
 		if resp != nil && resp.GetRecord() != nil {
-			logger.Infow("got response from forwarded request", "from", nextPeer, "key", key)
+			logger.Infow("got response from forwarded request", "from", nextPeer, "key", internal.LoggableRecordKeyString(key))
 			return resp, nil
 		}
 	} else {
@@ -102,7 +103,7 @@ func (dht *IpfsDHT) handleWant(ctx context.Context, p peer.ID, pmes *pb.Message)
 		// initiate get
 		val, err := dht.GetValue(ctx, key)
 		if err != nil {
-			logger.Infow("failed to get value", "error", err, "key", key)
+			logger.Infow("failed to get value", "error", err, "key", internal.LoggableRecordKeyString(key))
 			return nil, err
 		}
 		
@@ -116,10 +117,10 @@ func (dht *IpfsDHT) handleWant(ctx context.Context, p peer.ID, pmes *pb.Message)
 			}
 			resp.Record = rec
 			
-			logger.Infow("found value, returning response", "key", key)
+			logger.Infow("found value, returning response", "key", internal.LoggableRecordKeyString(key))
 			return resp, nil
 		} else {
-			logger.Infow("no value found for key", "key", key)
+			logger.Infow("no value found for key", "key", internal.LoggableRecordKeyString(key))
 			return nil, nil
 		}
 	}
