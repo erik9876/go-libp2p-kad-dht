@@ -26,3 +26,8 @@ func (m CtxMutex) Unlock() {
 		panic("not locked")
 	}
 }
+
+// IsLocked returns true if the mutex is currently locked
+func (m CtxMutex) IsLocked() bool {
+	return len(m) > 0
+}

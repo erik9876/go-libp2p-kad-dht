@@ -73,7 +73,6 @@ func (m *messageSenderImpl) OnDisconnect(ctx context.Context, p peer.ID) {
 // measure the RTT for latency measurements.
 func (m *messageSenderImpl) SendRequest(ctx context.Context, p peer.ID, pmes *pb.Message) (*pb.Message, error) {
 	ctx, _ = tag.New(ctx, metrics.UpsertMessageType(pmes))
-	logger.Debug("sending request")
 
 	ms, err := m.messageSenderForPeer(ctx, p)
 	if err != nil {
@@ -241,7 +240,7 @@ func (ms *peerMessageSender) prep(ctx context.Context) error {
 // streamReuseTries is the number of times we will try to reuse a stream to a
 // given peer before giving up and reverting to the old one-message-per-stream
 // behaviour.
-const streamReuseTries = 4
+const streamReuseTries = 3
 
 func (ms *peerMessageSender) SendMessage(ctx context.Context, pmes *pb.Message) error {
 	if err := ms.lk.Lock(ctx); err != nil {
@@ -281,7 +280,13 @@ func (ms *peerMessageSender) SendMessage(ctx context.Context, pmes *pb.Message) 
 }
 
 func (ms *peerMessageSender) SendRequest(ctx context.Context, pmes *pb.Message) (*pb.Message, error) {
+	// Debug: Check if lock is already held
+	if ms.lk.IsLocked() {
+		logger.Debugw("SendRequest: lock already held", "peer", ms.p, "msgType", pmes.GetType())
+	}
+	
 	if err := ms.lk.Lock(ctx); err != nil {
+		logger.Debugw("SendRequest: failed to acquire lock", "peer", ms.p, "error", err)
 		return nil, err
 	}
 	defer ms.lk.Unlock()
@@ -324,11 +329,9 @@ func (ms *peerMessageSender) SendRequest(ctx context.Context, pmes *pb.Message) 
 
 		var err error
 		if ms.singleMes > streamReuseTries {
-			logger.Debug("closing stream")
 			err = ms.s.Close()
 			ms.s = nil
 		} else if retry {
-			logger.Debug("incrementing singleMes")
 			ms.singleMes++
 		}
 
