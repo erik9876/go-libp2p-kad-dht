@@ -323,9 +323,11 @@ func (ms *peerMessageSender) SendRequest(ctx context.Context, pmes *pb.Message) 
 
 		var err error
 		if ms.singleMes > streamReuseTries {
+			logger.Debug("closing stream")
 			err = ms.s.Close()
 			ms.s = nil
 		} else if retry {
+			logger.Debug("incrementing singleMes")
 			ms.singleMes++
 		}
 
