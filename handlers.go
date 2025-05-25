@@ -99,7 +99,21 @@ func (dht *IpfsDHT) handleWant(ctx context.Context, p peer.ID, pmes *pb.Message)
 			return resp, nil
 		}
 	} else {
-		logger.Info("handleWant initiate get")
+		logger.Info("handleWant not forwarding")
+		resp := pb.NewMessage(pb.Message_WANT, k, pmes.GetClusterLevel())
+
+		logger.Info("handleWant searching local datastore")
+		rec, err := dht.checkLocalDatastore(ctx, k)
+		if err != nil {
+			logger.Infow("failed to check local datastore", "error", err, "key", internal.LoggableRecordKeyString(key))
+			return nil, err
+		}
+		if rec != nil {
+			logger.Infow("found value in local datastore", "key", internal.LoggableRecordKeyString(key))
+			resp.Record = rec
+			return resp, nil
+		}
+		logger.Info("handleWant no value in local datastore, initiate get")
 		// initiate get
 		val, err := dht.GetValue(ctx, key)
 		if err != nil {
@@ -109,8 +123,6 @@ func (dht *IpfsDHT) handleWant(ctx context.Context, p peer.ID, pmes *pb.Message)
 		
 		// If we found the value, return it directly through the request-response stream
 		if val != nil {
-			resp := pb.NewMessage(pb.Message_WANT, k, pmes.GetClusterLevel())
-			
 			rec := &recpb.Record{
 				Key:   k,
 				Value: val,
