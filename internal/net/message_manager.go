@@ -240,7 +240,7 @@ func (ms *peerMessageSender) prep(ctx context.Context) error {
 // streamReuseTries is the number of times we will try to reuse a stream to a
 // given peer before giving up and reverting to the old one-message-per-stream
 // behaviour.
-const streamReuseTries = 3
+const streamReuseTries = 4
 
 func (ms *peerMessageSender) SendMessage(ctx context.Context, pmes *pb.Message) error {
 	if err := ms.lk.Lock(ctx); err != nil {
