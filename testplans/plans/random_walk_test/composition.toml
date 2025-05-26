@@ -6,8 +6,9 @@ runner = "local:docker"
 
 [[groups]]
 id = "default"
-instances.count = 30
+instances.count = 20
 
     [groups.run]
     [groups.run.test_params]
     want_forwarding_probability = "0.75"
+    want_forward_retries = "3"

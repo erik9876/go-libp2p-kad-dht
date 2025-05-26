@@ -18,3 +18,4 @@ instances = { min = 5, max = 50, default = 20 }
 
     [testcases.params]
     want_forwarding_probability = { type = "float", desc = "probability of a want message getting forwarded", default = 0.7 }
+    want_forward_retries = { type = "int", desc = "number of times a peer tries to forward a want message in case of failure", default = 3 }
