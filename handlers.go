@@ -54,9 +54,6 @@ func (dht *IpfsDHT) handlerForMsgType(t pb.Message_MessageType) dhtHandler {
 }
 
 func (dht *IpfsDHT) handleWant(ctx context.Context, p peer.ID, pmes *pb.Message) (_ *pb.Message, err error) {
-	logger.Infow("handleWant", "from", p)
-	time.Sleep(10 * time.Millisecond)
-
 	// first, is there even a key?
 	k := pmes.GetKey()
 	if len(k) == 0 {
@@ -64,7 +61,7 @@ func (dht *IpfsDHT) handleWant(ctx context.Context, p peer.ID, pmes *pb.Message)
 	}
 
 	key := string(k)
-	logger.Infow("handleWant", "key", internal.LoggableRecordKeyString(key))
+	logger.Infow("handleWant", "from", p, "key", internal.LoggableRecordKeyString(key))
 
 	forwardingDecision := weightedCoinFlip(dht.WantForwardingProbability)
 	logger.Infow("handleWant", "forwardingDecision", forwardingDecision)
@@ -78,13 +75,9 @@ func (dht *IpfsDHT) handleWant(ctx context.Context, p peer.ID, pmes *pb.Message)
 			return nil, fmt.Errorf("no peers in routing table")
 		}
 
-		// randIndex := rand.Int() % len(peers)
-
-		// nextPeer := peers[randIndex]
-		nextPeer := p
+		randIndex := rand.Int() % len(peers)
+		nextPeer := peers[randIndex]
 		logger.Infow("handleWant", "forwarding to", nextPeer, "originalRequester", p, "key", internal.LoggableRecordKeyString(key))
-
-		// dht.saveForwardingState(nextPeer, p, key)
 
 		// Forward WANT Message to nextPeer
 		resp, err := dht.msgSender.SendRequest(ctx, nextPeer, pmes)
@@ -92,7 +85,6 @@ func (dht *IpfsDHT) handleWant(ctx context.Context, p peer.ID, pmes *pb.Message)
             logger.Infow("failed to forward WANT message", "error", err, "to", nextPeer)
             return nil, err
         }
-		time.Sleep(10 * time.Millisecond)
 
 		// If we got a response from the forwarded request, return it directly
 		// This will be sent back through the original request-response stream
@@ -101,29 +93,15 @@ func (dht *IpfsDHT) handleWant(ctx context.Context, p peer.ID, pmes *pb.Message)
 			return resp, nil
 		}
 	} else {
-		logger.Info("handleWant not forwarding")
-		resp := pb.NewMessage(pb.Message_WANT, k, pmes.GetClusterLevel())
+		logger.Info("handleWant not forwarding, initiating get")
 
-		logger.Info("handleWant searching local datastore")
-		rec, err := dht.checkLocalDatastore(ctx, k)
-		if err != nil {
-			logger.Infow("failed to check local datastore", "error", err, "key", internal.LoggableRecordKeyString(key))
-			return nil, err
-		}
-		if rec != nil {
-			logger.Infow("found value in local datastore", "key", internal.LoggableRecordKeyString(key))
-			resp.Record = rec
-			return resp, nil
-		}
-		time.Sleep(10 * time.Millisecond)
-		logger.Info("handleWant no value in local datastore, initiate get")
 		// initiate get
+		resp := pb.NewMessage(pb.Message_WANT, k, pmes.GetClusterLevel())
 		val, err := dht.GetValue(ctx, key)
 		if err != nil {
 			logger.Infow("failed to get value", "error", err, "key", internal.LoggableRecordKeyString(key))
 			return nil, err
 		}
-		time.Sleep(10 * time.Millisecond)
 		
 		// If we found the value, return it directly through the request-response stream
 		if val != nil {

@@ -700,10 +700,10 @@ func (dht *IpfsDHT) WantValueFromPeers(ctx context.Context, key string, count in
 	logger.Infow("want value from peers", "key", internal.LoggableRecordKeyString(key))
 
 	// First check if we have it locally
-	/*if rec, err := dht.getLocal(ctx, key); rec != nil && err == nil {
-		logger.Infow("found value locally", "key", internal.LoggableRecordKeyString(key))
+	if rec, err := dht.getLocal(ctx, key); rec != nil && err == nil {
+		logger.Infow("found value locally, WANT not needed", "key", internal.LoggableRecordKeyString(key))
 		return rec.GetValue(), nil
-	}*/
+	}
 
 	// Get some peers to send WANT requests to
 	peers, err := dht.GetClosestPeers(ctx, key)

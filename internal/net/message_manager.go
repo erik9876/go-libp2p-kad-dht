@@ -286,7 +286,6 @@ func (ms *peerMessageSender) SendRequest(ctx context.Context, pmes *pb.Message) 
 	}
 	
 	if err := ms.lk.Lock(ctx); err != nil {
-		logger.Debugw("SendRequest: failed to acquire lock", "peer", ms.p, "error", err)
 		return nil, err
 	}
 	defer ms.lk.Unlock()
