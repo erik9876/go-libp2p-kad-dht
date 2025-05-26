@@ -65,6 +65,7 @@ func (dht *IpfsDHT) handleWant(ctx context.Context, p peer.ID, pmes *pb.Message)
 
 	forwardingDecision := weightedCoinFlip(dht.WantForwardingProbability)
 	logger.Infow("handleWant", "forwardingDecision", forwardingDecision)
+	initiateGet := !forwardingDecision
 
 	// create random number
 	if forwardingDecision {
@@ -81,19 +82,29 @@ func (dht *IpfsDHT) handleWant(ctx context.Context, p peer.ID, pmes *pb.Message)
 		logger.Infow("handleWant", "forwarding to", nextPeer, "originalRequester", p, "key", internal.LoggableRecordKeyString(key))
 
 		// Forward WANT Message to nextPeer
-		resp, err := dht.msgSender.SendRequest(ctx, nextPeer, pmes)
-        if err != nil {
-            logger.Infow("failed to forward WANT message", "error", err, "to", nextPeer)
-            return nil, err
-        }
+		var resp *pb.Message
+		var err error
+		for i := 0; i < dht.WantForwardRetries; i++ {
+			//nextPeer = peers[rand.Int()%len(peers)]
+			nextPeer = p
+			resp, err = dht.msgSender.SendRequest(ctx, nextPeer, pmes)
+			if err == nil {
+				break
+			}
+			logger.Infow("failed to forward WANT message", "error", err, "to", nextPeer, "retry", i)
+		}
 
-		// If we got a response from the forwarded request, return it directly
-		// This will be sent back through the original request-response stream
+		// If we got a response from any retry, return it
 		if resp != nil && resp.GetRecord() != nil {
 			logger.Infow("got response from forwarded request", "from", nextPeer, "key", internal.LoggableRecordKeyString(key))
 			return resp, nil
 		}
-	} else {
+
+		// If all retries failed, fall back to initiating get
+		logger.Info("all forward retries failed, initiating get")
+		initiateGet = true
+	} 
+	if initiateGet {
 		logger.Info("handleWant not forwarding, initiating get")
 
 		// initiate get

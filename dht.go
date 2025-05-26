@@ -172,6 +172,8 @@ type IpfsDHT struct {
 
     // Probability that a WANT is forwarded
     WantForwardingProbability float64
+	// number of times to retry forwarding a WANT message
+	WantForwardRetries int
 }
 
 // Assert that IPFS assumptions about interfaces aren't broken. These aren't a
@@ -317,6 +319,7 @@ func makeDHT(h host.Host, cfg dhtcfg.Config) (*IpfsDHT, error) {
 		addrFilter:             cfg.AddressFilter,
 		onRequestHook:          cfg.OnRequestHook,
 		WantForwardingProbability: cfg.WantForwardingProbability,
+		WantForwardRetries: 	cfg.WantForwardRetries,
 
 		fixLowPeersChan: make(chan struct{}, 1),
 

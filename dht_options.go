@@ -394,3 +394,12 @@ func WantForwardingProbability(prob float64) Option {
 		return nil
 	}
 }
+
+// WantForwardRetries configures the number of retries for WANT message forwarding
+// before falling back to a direct GetValue.
+func WantForwardRetries(retries int) Option {
+	return func(c *dhtcfg.Config) error {
+		c.WantForwardRetries = retries
+		return nil
+	}
+}
