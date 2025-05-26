@@ -3,9 +3,10 @@ module github.com/erik9876/go-libp2p-kad-dht/testplans/plans/random_walk_test
 go 1.23.8
 
 require (
-	github.com/erik9876/go-libp2p-kad-dht v0.0.0-20250517082157-bc183164748d
+	github.com/erik9876/go-libp2p-kad-dht v0.0.0-20250526081651-6572e6810693
 	github.com/ipfs/go-log v1.0.5
 	github.com/libp2p/go-libp2p v0.41.1
+	github.com/multiformats/go-multibase v0.2.0
 	github.com/testground/sdk-go v0.3.0
 )
 
@@ -75,7 +76,6 @@ require (
 	github.com/multiformats/go-multiaddr v0.15.0 // indirect
 	github.com/multiformats/go-multiaddr-dns v0.4.1 // indirect
 	github.com/multiformats/go-multiaddr-fmt v0.1.0 // indirect
-	github.com/multiformats/go-multibase v0.2.0 // indirect
 	github.com/multiformats/go-multicodec v0.9.0 // indirect
 	github.com/multiformats/go-multihash v0.2.3 // indirect
 	github.com/multiformats/go-multistream v0.6.0 // indirect

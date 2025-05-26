@@ -8,18 +8,13 @@ enabled = true
 build_base_image = "golang:1.23.8-bullseye"
 module_path = "github.com/erik9876/go-libp2p-kad-dht/testplans/plans/random_walk_test"
 exec_pkg = "."
-dockerfile_extensions.pre_mod_download = 'RUN echo "Using go modfile: ${MODFILE}"'
 
 [runners."local:docker"]
 enabled = true
 
 [[testcases]]
 name= "random_walk_test"
-instances = { min = 1, max = 50, default = 1 }
+instances = { min = 5, max = 50, default = 20 }
 
-# Add more testcases here...
-# [[testcases]]
-# name = "another"
-# instances = { min = 1, max = 1, default = 1 }
-#   [testcase.params]
-#   param1 = { type = "int", desc = "an integer", unit = "units", default = 3 }
+    [testcases.params]
+    want_forwarding_probability = { type = "float", desc = "probability of a want message getting forwarded", default = 0.7 }
