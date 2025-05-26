@@ -283,6 +283,7 @@ func (ms *peerMessageSender) SendRequest(ctx context.Context, pmes *pb.Message) 
 	// Debug: Check if lock is already held
 	if ms.lk.IsLocked() {
 		logger.Debugw("SendRequest: lock already held", "peer", ms.p, "msgType", pmes.GetType())
+		return nil, fmt.Errorf("lock already held")
 	}
 	
 	if err := ms.lk.Lock(ctx); err != nil {

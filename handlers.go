@@ -75,8 +75,9 @@ func (dht *IpfsDHT) handleWant(ctx context.Context, p peer.ID, pmes *pb.Message)
 			return nil, fmt.Errorf("no peers in routing table")
 		}
 
-		randIndex := rand.Int() % len(peers)
-		nextPeer := peers[randIndex]
+		//randIndex := rand.Int() % len(peers)
+		//nextPeer := peers[randIndex]
+		nextPeer := p
 		logger.Infow("handleWant", "forwarding to", nextPeer, "originalRequester", p, "key", internal.LoggableRecordKeyString(key))
 
 		// Forward WANT Message to nextPeer
