@@ -5,6 +5,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"math/rand"
 	"sync"
 	"time"
 
@@ -706,20 +707,21 @@ func (dht *IpfsDHT) WantValueFromPeers(ctx context.Context, key string, count in
 	}
 
 	// Get some peers to send WANT requests to
-	peers, err := dht.GetClosestPeers(ctx, key)
-	if err != nil {
-		logger.Infow("error getting closest peers", "error", err)
-		return nil, err
-	}
-
+	peers := dht.routingTable.ListPeers()
 	if len(peers) == 0 {
 		logger.Debug("no peers found")
 		return nil, routing.ErrNotFound
 	}
-
-	// Limit the number of peers to query
+	
+	// Randomly select peers to query
 	if len(peers) > count && count > 0 {
-		peers = peers[:count]
+		// Create a random permutation of indices
+		indices := rand.Perm(len(peers))[:count]
+		selectedPeers := make([]peer.ID, count)
+		for i, idx := range indices {
+			selectedPeers[i] = peers[idx]
+		}
+		peers = selectedPeers
 	}
 	logger.Infow("want value from peers", "peers", peers)
 
