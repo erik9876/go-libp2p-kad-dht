@@ -73,6 +73,10 @@ type Config struct {
 
 	EnableOptimisticProvide       bool
 	OptimisticProvideJobsPoolSize int
+
+	EnableDummyOperations bool
+	DummyOperationsLowerBound time.Duration
+	DummyOperationsUpperBound time.Duration
 }
 
 func EmptyQueryFilter(_ interface{}, ai peer.AddrInfo) bool { return true }
@@ -136,6 +140,10 @@ var Defaults = func(o *Config) error {
 
 	// MAGIC: It makes sense to set it to a multiple of OptProvReturnRatio * BucketSize. We chose a multiple of 4.
 	o.OptimisticProvideJobsPoolSize = 60
+
+	o.EnableDummyOperations = true
+	o.DummyOperationsLowerBound = 5 * time.Second
+	o.DummyOperationsUpperBound = 20 * time.Second
 
 	return nil
 }

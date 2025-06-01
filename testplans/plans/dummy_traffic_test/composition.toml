@@ -1,0 +1,9 @@
+[global]
+plan = "dummy_traffic_test"
+case = "dummy_traffic_test"
+builder = "docker:go"
+runner = "local:docker"
+
+[[groups]]
+id = "default"
+instances.count = 5

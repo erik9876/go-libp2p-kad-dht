@@ -1,0 +1,18 @@
+name = "dummy_traffic_test"
+[defaults]
+builder = "exec:go"
+runner = "local:exec"
+
+[builders."docker:go"]
+enabled = true
+build_base_image = "golang:1.23.8-bullseye"
+module_path = "github.com/erik9876/go-libp2p-kad-dht/testplans/plans/dummy_traffic_test"
+exec_pkg = "."
+
+[runners."local:docker"]
+enabled = true
+
+[[testcases]]
+name= "dummy_traffic_test"
+instances = { min = 1, max = 50, default = 5 }
+

@@ -381,3 +381,28 @@ func OnRequestHook(f func(ctx context.Context, s network.Stream, req *pb.Message
 		return nil
 	}
 }
+
+// DummyOperationsLowerBound configures the lower bound for the interval between dummy operations.
+// Default: 5 * time.Second
+func DummyOperationsBounds(lowerBound time.Duration, upperBound time.Duration) Option {
+	return func(c *dhtcfg.Config) error {
+		if lowerBound < 0 || upperBound < 0 {
+			return fmt.Errorf("duration must be greater than 0")
+		}
+		if upperBound <= lowerBound {
+			return fmt.Errorf("upper bound must be greater than lower bound")
+		}
+		c.DummyOperationsLowerBound = lowerBound
+		c.DummyOperationsUpperBound = upperBound
+		return nil
+	}
+}
+
+// DisableDummyOperations enables dummy operations.
+// Default: true
+func DisableDummyOperations() Option {
+	return func(c *dhtcfg.Config) error {
+		c.EnableDummyOperations = false
+		return nil
+	}
+}

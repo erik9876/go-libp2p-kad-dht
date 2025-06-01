@@ -39,6 +39,8 @@ import (
 	"go.uber.org/multierr"
 	"go.uber.org/zap"
 	"google.golang.org/protobuf/proto"
+
+	"github.com/ipfs/go-cid"
 )
 
 const (
@@ -132,6 +134,12 @@ type IpfsDHT struct {
 	// number of concurrent lookupCheck operations
 	lookupCheckCapacity int
 	lookupChecksLk      sync.Mutex
+
+	// enable dummy operations
+	enableDummyOperations bool
+	// set lower and upper bound for the interval between dummy operations
+	dummyOperationsLowerBound time.Duration
+	dummyOperationsUpperBound time.Duration
 
 	// A function returning a set of bootstrap peers to fallback on if all other attempts to fix
 	// the routing table fail (or, e.g., this is the first time this node is
@@ -312,6 +320,9 @@ func makeDHT(h host.Host, cfg dhtcfg.Config) (*IpfsDHT, error) {
 		rtPeerDiversityFilter:  cfg.RoutingTable.DiversityFilter,
 		addrFilter:             cfg.AddressFilter,
 		onRequestHook:          cfg.OnRequestHook,
+		enableDummyOperations: 	cfg.EnableDummyOperations,
+		dummyOperationsLowerBound: cfg.DummyOperationsLowerBound,
+		dummyOperationsUpperBound: cfg.DummyOperationsUpperBound,
 
 		fixLowPeersChan: make(chan struct{}, 1),
 
@@ -376,32 +387,85 @@ func makeDHT(h host.Host, cfg dhtcfg.Config) (*IpfsDHT, error) {
 	dht.rtFreezeTimeout = rtFreezeTimeout
 
 	// send dummy messages
-	go func() {
-		ticker := time.NewTicker(time.Second * 10)
-		defer ticker.Stop()
-
-		for {
-			rand.New(rand.NewSource(time.Now().UnixNano()))
-			select {
-			case <-ticker.C:
-				// modify interval between ticks
-				delay := time.Duration(rand.Intn(1000)) * time.Millisecond
-				time.Sleep(delay)
-
-				destination := dht.getRandomPeer()
-				if destination == "" {
-					continue
-				}
-				messageType := dht.getRandomMessageType()
-				key := dht.generateRandomKey()
-				logger.Infow("sending dummy message", "destination", destination, "messageType", messageType, "key", key)
-				message := pb.NewMessage(messageType, key, 0)
-				dht.msgSender.SendMessage(dht.ctx, destination, message)
-			case <-dht.ctx.Done():
-				return
+	if dht.enableDummyOperations {
+		go func() {
+			minInterval := dht.dummyOperationsLowerBound
+			maxInterval := dht.dummyOperationsUpperBound
+			operationTimeout := 30 * time.Second
+			
+			getRandomInterval := func() time.Duration {
+				return time.Duration(rand.Int63n(int64(maxInterval-minInterval))) + minInterval
 			}
-		}
-	}()
+			
+			timer := time.NewTimer(getRandomInterval())
+			defer timer.Stop()
+
+			for {
+				select {
+				case <-timer.C:
+					nextInterval := getRandomInterval()
+					
+					destination := dht.getRandomPeer()
+					if destination == "" {
+						timer.Reset(nextInterval)
+						continue
+					}
+					
+					operationType := dht.getRandomOperationType()
+					
+					// Create individual context for this operation with timeout
+					opCtx, opCancel := context.WithTimeout(dht.ctx, operationTimeout)
+					
+					// Execute proper DHT operation asynchronously
+					go func(ctx context.Context, dest peer.ID, opType string) {
+						defer opCancel()
+						
+						logger.Infow("executing dummy DHT operation", 
+							"destination", dest, 
+							"operation", opType,
+							"timeout", operationTimeout)
+						
+						var err error
+						switch opType {
+						case "GET_CLOSEST_PEERS":
+							_, err = dht.GetClosestPeers(ctx, string(dest))
+							
+						case "PING":
+							err = dht.Ping(ctx, dest)
+							
+						case "GET_VALUE":
+							key := dht.generateRandomKey()
+							_, err = dht.GetValue(ctx, string(key))
+							
+						case "GET_PROVIDERS":
+							key := dht.generateRandomKey()
+							c := cid.NewCidV1(cid.Raw, key)
+							_, err = dht.FindProviders(ctx, c)
+							
+						case "FIND_PEER":
+							_, err = dht.FindPeer(ctx, dest)
+						}
+						
+						if err != nil {
+							logger.Debugw("dummy DHT operation failed", 
+								"destination", dest, 
+								"operation", opType, 
+								"error", err)
+						} else {
+							logger.Debugw("dummy DHT operation completed", 
+								"destination", dest, 
+								"operation", opType)
+						}
+					}(opCtx, destination, operationType)
+					
+					timer.Reset(nextInterval)
+					
+				case <-dht.ctx.Done():
+					return
+				}
+			}
+		}()
+	}
 
 	return dht, nil
 }
@@ -430,16 +494,23 @@ func (dht *IpfsDHT) getRandomPeer() peer.ID {
 	return peers[randIndex]
 }
 
-func (dht *IpfsDHT) getRandomMessageType() pb.Message_MessageType {
-	messageTypes := []pb.Message_MessageType{
-		pb.Message_GET_VALUE,
-		pb.Message_GET_PROVIDERS,
-		pb.Message_FIND_NODE,
-		pb.Message_PING,
+func (dht *IpfsDHT) getRandomOperationType() string {
+	operations := []string{
+		"GET_CLOSEST_PEERS",
+		"PING",
+		"FIND_PEER",
 	}
 
-	randIndex := rand.Intn(len(messageTypes))
-	return messageTypes[randIndex]
+	if dht.enableValues {
+		operations = append(operations, "GET_VALUE")
+	}
+
+	if dht.enableProviders {
+		operations = append(operations, "GET_PROVIDERS")
+	}
+
+	randIndex := rand.Intn(len(operations))
+	return operations[randIndex]
 }
 
 // lookupCheck performs a lookup request to a remote peer.ID, verifying that it is able to
