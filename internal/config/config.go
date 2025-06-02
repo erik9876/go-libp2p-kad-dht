@@ -52,6 +52,7 @@ type Config struct {
 	QueryPeerFilter        QueryFilterFunc
 	LookupCheckConcurrency int
 	MsgSenderBuilder       func(h host.Host, protos []protocol.ID) pb.MessageSenderWithDisconnect
+	WantEnableLocalLookup  bool
 	WantForwardingProbability float64 // Probability of forwarding WANT messages to other peers
 	WantForwardRetries     int       // Number of retries for WANT message forwarding
 
@@ -122,6 +123,7 @@ var Defaults = func(o *Config) error {
 	o.EnableValues = true
 	o.QueryPeerFilter = EmptyQueryFilter
 	o.MsgSenderBuilder = net.NewMessageSenderImpl
+	o.WantEnableLocalLookup = true
 	o.WantForwardingProbability = 0.7
 	o.WantForwardRetries = 3
 

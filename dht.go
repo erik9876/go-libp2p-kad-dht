@@ -170,6 +170,8 @@ type IpfsDHT struct {
 
 	onRequestHook func(ctx context.Context, s network.Stream, req *pb.Message)
 
+	// Enable local lookup before initiating a WANT request
+	WantEnableLocalLookup bool
     // Probability that a WANT is forwarded
     WantForwardingProbability float64
 	// number of times to retry forwarding a WANT message
@@ -318,6 +320,7 @@ func makeDHT(h host.Host, cfg dhtcfg.Config) (*IpfsDHT, error) {
 		rtPeerDiversityFilter:  cfg.RoutingTable.DiversityFilter,
 		addrFilter:             cfg.AddressFilter,
 		onRequestHook:          cfg.OnRequestHook,
+		WantEnableLocalLookup: 	cfg.WantEnableLocalLookup,
 		WantForwardingProbability: cfg.WantForwardingProbability,
 		WantForwardRetries: 	cfg.WantForwardRetries,
 

@@ -61,7 +61,8 @@ func setupDHT(ctx context.Context, h host.Host, wantForwardingProb float64, want
 	return dht.New(ctx, h, 
 		dht.Mode(dht.ModeServer), 
 		dht.WantForwardingProbability(wantForwardingProb),
-		dht.WantForwardRetries(wantForwardRetries))
+		dht.WantForwardRetries(wantForwardRetries), 
+		dht.WantDisableLocalLookup())
 }
 
 // collectPeers gathers peer information from the test network
