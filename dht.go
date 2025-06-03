@@ -397,17 +397,17 @@ func makeDHT(h host.Host, cfg dhtcfg.Config) (*IpfsDHT, error) {
 				return time.Duration(rand.Int63n(int64(maxInterval-minInterval))) + minInterval
 			}
 			
-			timer := time.NewTimer(getRandomInterval())
-			defer timer.Stop()
+			// Start with initial delay
+			nextInterval := getRandomInterval()
 
 			for {
 				select {
-				case <-timer.C:
-					nextInterval := getRandomInterval()
-					
+				case <-time.After(nextInterval):
 					destination := dht.getRandomPeer()
 					if destination == "" {
-						timer.Reset(nextInterval)
+						// No peers available, try again with new interval
+						nextInterval = getRandomInterval()
+						logger.Infow("no peers available, trying again with new interval", "interval", nextInterval)
 						continue
 					}
 					
@@ -422,8 +422,7 @@ func makeDHT(h host.Host, cfg dhtcfg.Config) (*IpfsDHT, error) {
 						
 						logger.Infow("executing dummy DHT operation", 
 							"destination", dest, 
-							"operation", opType,
-							"timeout", operationTimeout)
+							"operation", opType)
 						
 						var err error
 						switch opType {
@@ -458,7 +457,9 @@ func makeDHT(h host.Host, cfg dhtcfg.Config) (*IpfsDHT, error) {
 						}
 					}(opCtx, destination, operationType)
 					
-					timer.Reset(nextInterval)
+					// Set next interval for the next iteration
+					nextInterval = getRandomInterval()
+					logger.Infow("setting next interval", "interval", nextInterval)
 					
 				case <-dht.ctx.Done():
 					return
