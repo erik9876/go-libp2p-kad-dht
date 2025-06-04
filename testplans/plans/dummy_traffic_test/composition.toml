@@ -7,3 +7,8 @@ runner = "local:docker"
 [[groups]]
 id = "default"
 instances.count = 5
+
+    [groups.run]
+    [groups.run.test_params]
+    dummy_operations_lower_bound = "5"
+    dummy_operations_upper_bound = "20"
