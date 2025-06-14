@@ -19,3 +19,4 @@ instances = { min = 1, max = 50, default = 5 }
     [testcases.params]
     dummy_operations_lower_bound = { type = "int", desc = "lower bound for the time interval between two dummy operations", default = 5 }
     dummy_operations_upper_bound = { type = "int", desc = "upper bound for the time interval between two dummy operations", default = 20 }
+    latency = { type = "int", desc = "latency of all network links", unit = "milliseconds", default = 100 }

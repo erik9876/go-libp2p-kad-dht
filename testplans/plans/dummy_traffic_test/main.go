@@ -10,6 +10,7 @@ import (
 	libp2p "github.com/libp2p/go-libp2p"
 	"github.com/libp2p/go-libp2p/core/host"
 	"github.com/libp2p/go-libp2p/core/peer"
+	"github.com/testground/sdk-go/network"
 	"github.com/testground/sdk-go/run"
 	"github.com/testground/sdk-go/runtime"
 	"github.com/testground/sdk-go/sync"
@@ -21,6 +22,7 @@ const (
 	connectionTimeout     = 5 * time.Second
 	bootstrapTimeout      = 20 * time.Second
 	barrierWaitTime       = 2 * time.Second
+	bandwidth             = 1024 * 1024	      // 1MiB
 )
 
 func main() {
@@ -138,6 +140,37 @@ func runDummyTrafficTest(runenv *runtime.RunEnv, initCtx *run.InitContext) error
 			runenv.RecordMessage("error waiting for %s: %s", state, err)
 		}
 	}
+
+	// Traffic shaping
+	latency := time.Duration(runenv.IntParam("latency")) * time.Millisecond
+	runenv.RecordMessage("Configuring traffic shaping - Latency: %v, Bandwidth: %d bytes", latency, bandwidth)
+
+	// Wait for network to be ready before configuring
+	initCtx.NetClient.MustWaitNetworkInitialized(ctx)
+
+	// Configure network with explicit rules for all interfaces
+	config := &network.Config{
+		Network: "default",
+		Enable: true,
+		Default: network.LinkShape{
+			Latency: latency,
+			Bandwidth: uint64(bandwidth),
+		},
+		CallbackState: sync.State("network_configured"),
+		CallbackTarget: runenv.TestGroupInstanceCount,
+		RoutingPolicy: network.DenyAll,
+	}
+
+	// Configure network and wait for it to be ready
+	initCtx.NetClient.MustConfigureNetwork(ctx, config)
+
+	// Wait for network configuration to be applied
+	barrier("network_configured")
+
+	// Wait a bit for network to stabilize
+	time.Sleep(5 * time.Second)
+
+	runenv.RecordMessage("Traffic shaping configured successfully")
 
 	// Initialize host and DHT
 	h, err := setupHost()
