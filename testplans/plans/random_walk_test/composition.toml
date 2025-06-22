@@ -10,5 +10,5 @@ instances.count = 20
 
     [groups.run]
     [groups.run.test_params]
-    want_forwarding_probability = "0.75"
-    want_forward_retries = "3"
+    want_forwarding_probability = "0.8"
+    want_forward_attempts = "3"

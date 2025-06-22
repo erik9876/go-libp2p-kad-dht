@@ -54,7 +54,7 @@ type Config struct {
 	MsgSenderBuilder       func(h host.Host, protos []protocol.ID) pb.MessageSenderWithDisconnect
 	WantEnableLocalLookup  bool
 	WantForwardingProbability float64 // Probability of forwarding WANT messages to other peers
-	WantForwardRetries     int       // Number of retries for WANT message forwarding
+	WantForwardAttempts     int       // Number of attempts for WANT message forwarding
 
 	RoutingTable struct {
 		RefreshQueryTimeout time.Duration
@@ -124,8 +124,8 @@ var Defaults = func(o *Config) error {
 	o.QueryPeerFilter = EmptyQueryFilter
 	o.MsgSenderBuilder = net.NewMessageSenderImpl
 	o.WantEnableLocalLookup = true
-	o.WantForwardingProbability = 0.7
-	o.WantForwardRetries = 3
+	o.WantForwardingProbability = 0.8
+	o.WantForwardAttempts = 3
 
 	o.RoutingTable.LatencyTolerance = 10 * time.Second
 	o.RoutingTable.RefreshQueryTimeout = 10 * time.Second

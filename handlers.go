@@ -82,7 +82,7 @@ func (dht *IpfsDHT) handleWant(ctx context.Context, p peer.ID, pmes *pb.Message)
 		// Forward WANT Message to nextPeer
 		var resp *pb.Message
 		var err error
-		for i := 0; i < dht.WantForwardRetries; i++ {
+		for i := 0; i < dht.WantForwardAttempts; i++ {
 			nextPeer = peers[rand.Int()%len(peers)]
 			resp, err = dht.msgSender.SendRequest(ctx, nextPeer, pmes)
 			if err == nil {

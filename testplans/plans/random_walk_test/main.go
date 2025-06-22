@@ -59,11 +59,11 @@ func setupHost() (host.Host, error) {
 }
 
 // setupDHT initializes and configures the DHT with the given forwarding probability
-func setupDHT(ctx context.Context, h host.Host, wantForwardingProb float64, wantForwardRetries int) (*dht.IpfsDHT, error) {
+func setupDHT(ctx context.Context, h host.Host, wantForwardingProb float64, wantForwardAttempts int) (*dht.IpfsDHT, error) {
 	return dht.New(ctx, h, 
 		dht.Mode(dht.ModeServer), 
 		dht.WantForwardingProbability(wantForwardingProb),
-		dht.WantForwardRetries(wantForwardRetries), 
+		dht.WantForwardAttempts(wantForwardAttempts), 
 		dht.WantDisableLocalLookup())
 }
 
@@ -289,8 +289,8 @@ func runRandomWalkTest(runenv *runtime.RunEnv, initCtx *run.InitContext) error {
 	barrier("initialized")
 
 	wantForwardingProb := runenv.FloatParam("want_forwarding_probability")
-	wantForwardRetries := runenv.IntParam("want_forward_retries")
-	kadDHT, err := setupDHT(ctx, h, wantForwardingProb, wantForwardRetries)
+	wantForwardAttempts := runenv.IntParam("want_forward_attempts")
+	kadDHT, err := setupDHT(ctx, h, wantForwardingProb, wantForwardAttempts)
 	if err != nil {
 		return fmt.Errorf("failed to setup DHT: %w", err)
 	}

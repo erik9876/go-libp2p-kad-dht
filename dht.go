@@ -174,8 +174,8 @@ type IpfsDHT struct {
 	WantEnableLocalLookup bool
     // Probability that a WANT is forwarded
     WantForwardingProbability float64
-	// number of times to retry forwarding a WANT message
-	WantForwardRetries int
+	// number of times to attempt forwarding a WANT message
+	WantForwardAttempts int
 }
 
 // Assert that IPFS assumptions about interfaces aren't broken. These aren't a
@@ -322,7 +322,7 @@ func makeDHT(h host.Host, cfg dhtcfg.Config) (*IpfsDHT, error) {
 		onRequestHook:          cfg.OnRequestHook,
 		WantEnableLocalLookup: 	cfg.WantEnableLocalLookup,
 		WantForwardingProbability: cfg.WantForwardingProbability,
-		WantForwardRetries: 	cfg.WantForwardRetries,
+		WantForwardAttempts: 	cfg.WantForwardAttempts,
 
 		fixLowPeersChan: make(chan struct{}, 1),
 
