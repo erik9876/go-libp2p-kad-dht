@@ -103,6 +103,8 @@ github.com/envoyproxy/go-control-plane v0.9.4/go.mod h1:6rpuAdCZL397s3pYoYcLgu1m
 github.com/envoyproxy/protoc-gen-validate v0.1.0/go.mod h1:iSmxcyjqTsJpI2R4NaDN7+kN2VEUnK/pcBlmesArF7c=
 github.com/erik9876/go-libp2p-kad-dht v0.0.0-20250602113845-a34a3507b493 h1:0w5XL4BiUkvupFCH9pqdqopG3q1t3cKUK8q/E/i2ZAE=
 github.com/erik9876/go-libp2p-kad-dht v0.0.0-20250602113845-a34a3507b493/go.mod h1:Roz4zV7YdiAI0U2ynTUOYeYYv1JD6E/DAzASmp2vSPA=
+github.com/erik9876/go-libp2p-kad-dht v0.0.0-20250622125436-104806c61da9 h1:fLKztLD7Cw60iAjlJL/FzbXhugeJvbC/QGnmjbZUoDE=
+github.com/erik9876/go-libp2p-kad-dht v0.0.0-20250622125436-104806c61da9/go.mod h1:Roz4zV7YdiAI0U2ynTUOYeYYv1JD6E/DAzASmp2vSPA=
 github.com/evanphx/json-patch v4.2.0+incompatible/go.mod h1:50XU6AFN0ol/bzJsmQLiYLvXMP4fmwYFNcr97nuDLSk=
 github.com/flynn/go-shlex v0.0.0-20150515145356-3f9db97f8568/go.mod h1:xEzjJPgXI435gkrCt3MPfRiAkVrwSbHsst4LCFVfpJc=
 github.com/flynn/noise v1.1.0 h1:KjPQoQCEFdZDiP03phOvGi11+SVVhBG2wOWAorLsstg=
