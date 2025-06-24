@@ -403,34 +403,31 @@ func makeDHT(h host.Host, cfg dhtcfg.Config) (*IpfsDHT, error) {
 			for {
 				select {
 				case <-time.After(nextInterval):
-					destination := dht.getRandomPeer()
-					if destination == "" {
-						// No peers available, try again with new interval
-						nextInterval = getRandomInterval()
-						logger.Infow("no peers available, trying again with new interval", "interval", nextInterval)
-						continue
-					}
-					
 					operationType := dht.getRandomOperationType()
 					
 					// Create individual context for this operation with timeout
 					opCtx, opCancel := context.WithTimeout(dht.ctx, operationTimeout)
 					
 					// Execute proper DHT operation asynchronously
-					go func(ctx context.Context, dest peer.ID, opType string) {
+					go func(ctx context.Context, opType string) {
 						defer opCancel()
 						
 						logger.Infow("executing dummy DHT operation", 
-							"destination", dest, 
 							"operation", opType)
 						
 						var err error
 						switch opType {
 						case "GET_CLOSEST_PEERS":
-							_, err = dht.GetClosestPeers(ctx, string(dest))
+							key := dht.generateRandomKey()
+							_, err = dht.GetClosestPeers(ctx, string(key))
 							
 						case "PING":
-							err = dht.Ping(ctx, dest)
+							destination := dht.getRandomPeer()
+							if destination == "" {
+								logger.Debugw("no peers available for PING operation")
+								return
+							}
+							err = dht.Ping(ctx, destination)
 							
 						case "GET_VALUE":
 							key := dht.generateRandomKey()
@@ -442,20 +439,19 @@ func makeDHT(h host.Host, cfg dhtcfg.Config) (*IpfsDHT, error) {
 							_, err = dht.FindProviders(ctx, c)
 							
 						case "FIND_PEER":
-							_, err = dht.FindPeer(ctx, dest)
+							randomPeerID := dht.generateRandomPeerID()
+							_, err = dht.FindPeer(ctx, randomPeerID)
 						}
 						
 						if err != nil {
 							logger.Debugw("dummy DHT operation failed", 
-								"destination", dest, 
 								"operation", opType, 
 								"error", err)
 						} else {
 							logger.Debugw("dummy DHT operation completed", 
-								"destination", dest, 
 								"operation", opType)
 						}
-					}(opCtx, destination, operationType)
+					}(opCtx, operationType)
 					
 					// Set next interval for the next iteration
 					nextInterval = getRandomInterval()
@@ -482,6 +478,32 @@ func (dht *IpfsDHT) generateRandomKey() []byte {
 		r.Read(key)
 	}
 	return key
+}
+
+func (dht *IpfsDHT) generateRandomPeerID() peer.ID {
+	cpl := rand.Intn(16)
+	
+	randomPeerID, err := dht.routingTable.GenRandPeerID(uint(cpl))
+	if err != nil {
+		logger.Infow("failed to generate random peer ID, using fallback", "error", err)
+		// Fallback: generate a completely random peer ID
+		key := make([]byte, 32)
+		_, err := crand.Read(key)
+		if err != nil {
+			r := rand.New(rand.NewSource(time.Now().UnixNano()))
+			r.Read(key)
+		}
+		
+		// Create a deterministic but random peer ID from the key
+		hash := make([]byte, 32)
+		copy(hash, key)
+		hash[0] = 0x12 // Set the multicodec prefix for SHA256
+		hash[1] = 0x20 // Set the length (32 bytes)
+		
+		return peer.ID(hash)
+	}
+	
+	return randomPeerID
 }
 
 func (dht *IpfsDHT) getRandomPeer() peer.ID {
