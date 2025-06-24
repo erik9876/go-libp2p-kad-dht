@@ -108,6 +108,8 @@ github.com/erik9876/go-libp2p-kad-dht v0.0.0-20250603092225-c3cab3ee690e h1:DrFl
 github.com/erik9876/go-libp2p-kad-dht v0.0.0-20250603092225-c3cab3ee690e/go.mod h1:Roz4zV7YdiAI0U2ynTUOYeYYv1JD6E/DAzASmp2vSPA=
 github.com/erik9876/go-libp2p-kad-dht v0.0.0-20250604070707-567ea67771cd h1:BBIAfwkxJxBQVO7CJHi/xyuLapSN4I86J+5HsK/239k=
 github.com/erik9876/go-libp2p-kad-dht v0.0.0-20250604070707-567ea67771cd/go.mod h1:Roz4zV7YdiAI0U2ynTUOYeYYv1JD6E/DAzASmp2vSPA=
+github.com/erik9876/go-libp2p-kad-dht v0.0.0-20250624075807-404ee5450b12 h1:SjLzje11clallO34pKtRmcQlv7V8459OpQCzUVPnVjY=
+github.com/erik9876/go-libp2p-kad-dht v0.0.0-20250624075807-404ee5450b12/go.mod h1:Roz4zV7YdiAI0U2ynTUOYeYYv1JD6E/DAzASmp2vSPA=
 github.com/evanphx/json-patch v4.2.0+incompatible/go.mod h1:50XU6AFN0ol/bzJsmQLiYLvXMP4fmwYFNcr97nuDLSk=
 github.com/flynn/go-shlex v0.0.0-20150515145356-3f9db97f8568/go.mod h1:xEzjJPgXI435gkrCt3MPfRiAkVrwSbHsst4LCFVfpJc=
 github.com/flynn/noise v1.1.0 h1:KjPQoQCEFdZDiP03phOvGi11+SVVhBG2wOWAorLsstg=

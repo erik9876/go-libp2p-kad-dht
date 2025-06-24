@@ -3,7 +3,7 @@ module github.com/erik9876/go-libp2p-kad-dht/testplans/plans/dummy_traffic_test
 go 1.23.8
 
 require (
-	github.com/erik9876/go-libp2p-kad-dht v0.0.0-20250604070707-567ea67771cd
+	github.com/erik9876/go-libp2p-kad-dht v0.0.0-20250624075807-404ee5450b12
 	github.com/ipfs/go-log v1.0.5
 	github.com/libp2p/go-libp2p v0.41.1
 	github.com/testground/sdk-go v0.2.4
