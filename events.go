@@ -91,6 +91,8 @@ type LookupEvent struct {
 	Response *LookupUpdateEvent
 	// Terminate, if not nil, describe a termination event.
 	Terminate *LookupTerminateEvent
+	// Origin of the lookup event
+	Origin string
 }
 
 // NewLookupUpdateEvent creates a new lookup update event, automatically converting the passed peer IDs to peer Kad IDs.
@@ -236,6 +238,14 @@ var LookupEventBufferSize = 16
 // PublishLookupEvent publishes a query event to the query event channel
 // associated with the given context, if any.
 func PublishLookupEvent(ctx context.Context, ev *LookupEvent) {
+	if ev.Origin == "" {
+		ev.Origin = lookupOriginFrom(ctx)
+	}
+
+	if hook := globalLookupHook.Load(); hook != nil {
+		(*hook)(ev)
+	}
+
 	ich := ctx.Value(routingLookupKey{})
 	if ich == nil {
 		return
