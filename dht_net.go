@@ -93,6 +93,8 @@ func (dht *IpfsDHT) handleNewMessage(s network.Stream) bool {
 			dht.onRequestHook(ctx, s, &req)
 		}
 
+		recordIncomingQuery(req.GetType())
+
 		handler := dht.handlerForMsgType(req.GetType())
 		if handler == nil {
 			metrics.RecordMessageHandleErr(ctx)
